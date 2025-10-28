@@ -207,6 +207,21 @@ Edit claude_desktop_config.json
   Invoke-RestMethod -Uri http://localhost:5100/api/tools/netcat -Method POST -Body $body -ContentType "application/json"
   ```
 
+- BBOT (Recursive Internet Scanner):
+  ```powershell
+  # Using preset
+  $body = @{ target="example.com"; preset="web-basic"; additional_args="" } | ConvertTo-Json
+  Invoke-RestMethod -Uri http://localhost:5100/api/tools/bbot -Method POST -Body $body -ContentType "application/json"
+  
+  # Using specific modules
+  $body = @{ target="example.com"; modules="subfinder-enum,dnsx-resolve,nmap-portscan"; additional_args="" } | ConvertTo-Json
+  Invoke-RestMethod -Uri http://localhost:5100/api/tools/bbot -Method POST -Body $body -ContentType "application/json"
+  
+  # With output directory
+  $body = @{ target="example.com"; preset="cloud-enum"; output_dir="C:\bbot_output"; additional_args="" } | ConvertTo-Json
+  Invoke-RestMethod -Uri http://localhost:5100/api/tools/bbot -Method POST -Body $body -ContentType "application/json"
+  ```
+
 - General Command:
   ```powershell
   $body = @{ command="whoami" } | ConvertTo-Json

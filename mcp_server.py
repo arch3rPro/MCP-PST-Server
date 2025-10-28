@@ -190,6 +190,21 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         data = {"mode": mode, "host": host, "port": port, "listen_port": listen_port, "binary": binary, "additional_args": additional_args}
         return pst_client.safe_post("api/tools/netcat", data)
 
+    @mcp.tool()
+    def bbot_scan(target: str = "", preset: str = "", modules: str = "", flags: str = "", output_modules: str = "", output_dir: str = "", whitelist: str = "", blacklist: str = "", additional_args: str = "") -> Dict[str, Any]:
+        data = {
+            "target": target,
+            "preset": preset,
+            "modules": modules,
+            "flags": flags,
+            "output_modules": output_modules,
+            "output_dir": output_dir,
+            "whitelist": whitelist,
+            "blacklist": blacklist,
+            "additional_args": additional_args
+        }
+        return pst_client.safe_post("api/tools/bbot", data)
+
     # 健康检查与通用命令
     @mcp.tool()
     def server_health() -> Dict[str, Any]:

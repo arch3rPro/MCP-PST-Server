@@ -1,0 +1,6 @@
+# MCP-PST-Server Dependencies
+fastapi>=0.68.0
+uvicorn>=0.15.0
+requests>=2.25.1
+pydantic>=1.8.0
+mcp>=1.0.0

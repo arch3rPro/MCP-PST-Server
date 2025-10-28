@@ -51,7 +51,7 @@ def supported_tools() -> List[str]:
     return [
         "nmap", "httpx", "ffuf", "feroxbuster", "fscan", "hydra", "hackbrowserdata",
         "subfinder", "dnsx", "naabu", "nuclei", "katana", "afrog", "sqlmap",
-        "metasploit", "john", "nikto", "gobuster", "masscan", "netcat", "ehole",
+        "metasploit", "john", "nikto", "gobuster", "masscan", "netcat", "ehole", "bbot",
     ]
 
 ESSENTIAL_TOOLS = ["nmap", "httpx", "subfinder", "dnsx", "naabu", "nuclei", "ffuf", "feroxbuster", "fscan", "hydra"]
@@ -343,6 +343,52 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
                 cmd += [host, port]
         return add_args(cmd, data.get("additional_args", ""))
 
+    if tool == "bbot":
+        target = data.get("target", "")
+        preset = data.get("preset", "")
+        modules = data.get("modules", "")
+        flags = data.get("flags", "")
+        output_modules = data.get("output_modules", "")
+        output_dir = data.get("output_dir", "")
+        whitelist = data.get("whitelist", "")
+        blacklist = data.get("blacklist", "")
+        
+        cmd = ["bbot"]
+        
+        # Add target(s)
+        if target:
+            cmd += ["-t", target]
+        
+        # Add preset(s)
+        if preset:
+            cmd += ["-p", preset]
+        
+        # Add module(s)
+        if modules:
+            cmd += ["-m", modules]
+        
+        # Add flags
+        if flags:
+            cmd += ["-f", flags]
+        
+        # Add output module(s)
+        if output_modules:
+            cmd += ["-om", output_modules]
+        
+        # Add output directory
+        if output_dir:
+            cmd += ["-o", output_dir]
+        
+        # Add whitelist
+        if whitelist:
+            cmd += ["-w", whitelist]
+        
+        # Add blacklist
+        if blacklist:
+            cmd += ["-b", blacklist]
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
     raise ValueError(f"Unsupported tool: {tool}")
 
 def shutil_which(name: str) -> Optional[str]:
@@ -375,6 +421,17 @@ def validate_tool_params(tool: str, data: Dict[str, Any]) -> Optional[str]:
             return f"列表文件不存在: {list_file}"
         if fingerprints and not os.path.exists(fingerprints):
             return f"指纹文件不存在: {fingerprints}"
+    
+    if tool == "bbot":
+        target = str(data.get("target", "")).strip()
+        preset = str(data.get("preset", "")).strip()
+        modules = str(data.get("modules", "")).strip()
+        flags = str(data.get("flags", "")).strip()
+        
+        # BBOT requires at least one of target, preset, modules, or flags
+        if not any([target, preset, modules, flags]):
+            return "bbot 需要提供 'target', 'preset', 'modules', 或 'flags' 之一"
+    
     return None
 
 def parse_tool_output(tool: str, stdout: str, stderr: str) -> Dict[str, Any]:
@@ -388,6 +445,45 @@ def parse_tool_output(tool: str, stdout: str, stderr: str) -> Dict[str, Any]:
         # Extract simple finding lines containing keyword patterns
         findings = [ln for ln in lines if re.search(r"(?i)(fingerprint|match|title|status)", ln)]
         parsed.update({"urls": urls, "findings": findings})
+    elif tool == "bbot":
+        # Extract URLs
+        urls = []
+        for m in re.finditer(r"https?://[^\s]+", stdout or ""):
+            urls.append(m.group(0))
+        
+        # Extract subdomains
+        subdomains = []
+        for m in re.finditer(r"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", stdout or "", re.MULTILINE):
+            subdomains.append(m.group(0))
+        
+        # Extract IP addresses
+        ips = []
+        for m in re.finditer(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", stdout or ""):
+            ips.append(m.group(0))
+        
+        # Extract ports
+        ports = []
+        for m in re.finditer(r":(\d{1,5})\b", stdout or ""):
+            port = int(m.group(1))
+            if 1 <= port <= 65535 and port not in ports:
+                ports.append(port)
+        
+        # Extract vulnerability findings
+        vulnerabilities = [ln for ln in lines if re.search(r"(?i)(vulnerability|cve|vuln|rce|xss|sqli|lfi)", ln)]
+        
+        # Extract email addresses
+        emails = []
+        for m in re.finditer(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", stdout or ""):
+            emails.append(m.group(0))
+        
+        parsed.update({
+            "urls": urls,
+            "subdomains": subdomains,
+            "ips": ips,
+            "ports": sorted(ports),
+            "vulnerabilities": vulnerabilities,
+            "emails": emails
+        })
     return parsed
 
 def fetch_pentest_windows_readme(branch: str = "main") -> str:
