@@ -1,6 +1,13 @@
-# MCP-PST-Server (Windows AI-Assisted Penetration Testing Environment)
+<h1 align="center">MCP-PST-Server</h1>
 
-**Language:** [English](README.md) | [中文](README-ZH.md)
+<p align="center">
+  <em>Windows AI-Assisted Penetration Testing MCP Server</em>
+</p>
+
+<p align="center">
+  <a href="README-ZH.md"><strong>中文文档 </strong></a> | 
+  <a href="README.md"><strong>English README</strong></a>
+</p>
 
 **PST MCP Server** is a lightweight API bridge designed to connect MCP Clients (e.g., Cherry Studio, Claude Desktop) to an API server, enabling command execution on a Windows terminal. This allows AI Agents or AI Clients to seamlessly invoke various penetration testing tools within the Windows environment, achieving **AI-assisted penetration testing**.
 

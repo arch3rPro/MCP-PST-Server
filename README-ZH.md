@@ -1,6 +1,13 @@
-# MCP-PST-Server (Windows AI 辅助渗透测试环境)
+<h1 align="center">MCP-PST-Server</h1>
 
-**语言:** [English](README.md) | [中文](README-ZH.md)
+<p align="center">
+  <em>Windows渗透测试工具MCP服务</em>
+</p>
+
+<p align="center">
+  <a href="README-ZH.md"><strong>中文文档 </strong></a> | 
+  <a href="README.md"><strong>English README</strong></a>
+</p>
 
 **PST MCP 服务器**是一个轻量级的 API 网桥，旨在将 MCP 客户端（例如：Cherry Studio, Claude Desktop）与 API 服务器连接起来，从而在 Windows 终端上执行命令。通过这种方式，AI Agent 或 AI 客户端能够无缝地调用 Windows 环境中的各种渗透测试工具，实现 **AI 辅助渗透测试**。
 
