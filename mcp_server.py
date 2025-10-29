@@ -187,8 +187,84 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         return pst_client.safe_post("api/tools/hackbrowserdata", data)
 
     @mcp.tool()
-    def sqlmap_scan(url: str, data: str = "", additional_args: str = "--batch") -> Dict[str, Any]:
-        post_data = {"url": url, "data": data, "additional_args": additional_args}
+    def sqlmap_scan(
+        url: str,
+        data: str = "",
+        cookie: str = "",
+        headers: str = "",
+        proxy: str = "",
+        level: str = "1",
+        risk: str = "1",
+        dbms: str = "",
+        technique: str = "BEUST",
+        os: str = "",
+        batch: bool = True,
+        threads: str = "1",
+        timeout: str = "30",
+        retries: str = "3",
+        tamper: str = "",
+        random_agent: bool = False,
+        auth_type: str = "",
+        auth_cred: str = "",
+        tables: bool = False,
+        columns: bool = False,
+        dump: bool = False,
+        dump_all: bool = False,
+        dbs: bool = False,
+        current_user: bool = False,
+        current_db: bool = False,
+        is_dba: bool = False,
+        users: bool = False,
+        passwords: bool = False,
+        privileges: bool = False,
+        roles: bool = False,
+        sql_query: str = "",
+        sql_shell: bool = False,
+        os_shell: bool = False,
+        file_read: str = "",
+        file_write: str = "",
+        file_dest: str = "",
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        post_data = {
+            "url": url,
+            "data": data,
+            "cookie": cookie,
+            "headers": headers,
+            "proxy": proxy,
+            "level": level,
+            "risk": risk,
+            "dbms": dbms,
+            "technique": technique,
+            "os": os,
+            "batch": "1" if batch else "",
+            "threads": threads,
+            "timeout": timeout,
+            "retries": retries,
+            "tamper": tamper,
+            "random_agent": "1" if random_agent else "",
+            "auth_type": auth_type,
+            "auth_cred": auth_cred,
+            "tables": "1" if tables else "",
+            "columns": "1" if columns else "",
+            "dump": "1" if dump else "",
+            "dump_all": "1" if dump_all else "",
+            "dbs": "1" if dbs else "",
+            "current_user": "1" if current_user else "",
+            "current_db": "1" if current_db else "",
+            "is_dba": "1" if is_dba else "",
+            "users": "1" if users else "",
+            "passwords": "1" if passwords else "",
+            "privileges": "1" if privileges else "",
+            "roles": "1" if roles else "",
+            "sql_query": sql_query,
+            "sql_shell": "1" if sql_shell else "",
+            "os_shell": "1" if os_shell else "",
+            "file_read": file_read,
+            "file_write": file_write,
+            "file_dest": file_dest,
+            "additional_args": additional_args
+        }
         return pst_client.safe_post("api/tools/sqlmap", post_data)
 
     @mcp.tool()
@@ -303,6 +379,129 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         2. 激进扫描可能触发警报
         3. UDP扫描比TCP慢得多
         4. 脚本扫描显著增加扫描时间
+        """
+
+    # SQLMap注入测试提示词
+    @mcp.prompt()
+    def sqlmap_scan_guide() -> str:
+        """
+        # SQLMap SQL注入测试指南
+
+        ## 常用扫描场景
+
+        ### 1. 基本SQL注入检测
+        ```python
+        sqlmap_scan(url="http://example.com/page.php?id=1")
+        ```
+
+        ### 2. POST请求注入测试
+        ```python
+        sqlmap_scan(
+            url="http://example.com/login.php",
+            data="username=admin&password=123",
+            cookie="PHPSESSID=abcdef123456"
+        )
+        ```
+
+        ### 3. 数据库枚举
+        ```python
+        sqlmap_scan(
+            url="http://example.com/page.php?id=1",
+            dbs=True,
+            tables=True,
+            columns=True
+        )
+        ```
+
+        ### 4. 数据提取
+        ```python
+        sqlmap_scan(
+            url="http://example.com/page.php?id=1",
+            dbms="mysql",
+            dump=True,
+            tables=True,
+            columns=True
+        )
+        ```
+
+        ### 5. 高级注入技术
+        ```python
+        sqlmap_scan(
+            url="http://example.com/page.php?id=1",
+            technique="BEUST",
+            level="3",
+            risk="2",
+            tamper="space2comment"
+        )
+        ```
+
+        ### 6. 获取系统权限
+        ```python
+        sqlmap_scan(
+            url="http://example.com/page.php?id=1",
+            os_shell=True,
+            is_dba=True
+        )
+        ```
+
+        ## 主要参数说明
+
+        ### 目标与请求参数
+        - url (必需): 目标URL
+        - data: POST请求数据
+        - cookie: HTTP Cookie
+        - headers: 自定义HTTP头
+        - proxy: 代理服务器
+
+        ### 检测与注入参数
+        - level: 测试等级(1-5, 默认1)
+        - risk: 风险等级(1-3, 默认1)
+        - dbms: 指定数据库类型(mysql, oracle, postgresql等)
+        - technique: 注入技术(B=布尔盲注, E=报错注入, U=UNION查询, S=堆叠查询, T=时间盲注)
+        - os: 指定操作系统(windows, linux)
+
+        ### 性能与优化参数
+        - batch: 批处理模式(默认True)
+        - threads: 线程数(默认1)
+        - timeout: 超时时间(默认30秒)
+        - retries: 重试次数(默认3)
+        - tamper: 使用混淆脚本
+        - random_agent: 随机User-Agent
+
+        ### 认证参数
+        - auth_type: 认证类型(basic, digest, ntlm)
+        - auth_cred: 认证凭证
+
+        ### 数据枚举参数
+        - dbs: 枚举所有数据库
+        - tables: 枚举数据库表
+        - columns: 枚举表列
+        - dump: 转储表数据
+        - dump_all: 转储所有数据库
+        - current_user: 获取当前用户
+        - current_db: 获取当前数据库
+        - is_dba: 检测是否为DBA
+        - users: 枚举数据库用户
+        - passwords: 获取密码哈希
+        - privileges: 获取用户权限
+        - roles: 获取用户角色
+
+        ### 高级功能参数
+        - sql_query: 执行自定义SQL查询
+        - sql_shell: 启动交互式SQL shell
+        - os_shell: 启动操作系统shell
+        - file_read: 读取服务器文件
+        - file_write: 写入文件到服务器
+        - file_dest: 文件写入目标路径
+
+        ## 注意事项
+
+        1. 仅在授权范围内使用SQLMap
+        2. 高风险等级可能导致目标系统不稳定
+        3. 数据转储操作可能产生大量数据
+        4. 获取系统权限是高风险操作，需谨慎使用
+        5. 建议在测试环境中先验证参数组合
+        6. 使用代理保护身份，避免直接连接
         """
 
     return mcp
