@@ -8,6 +8,7 @@ import argparse
 import logging
 from typing import Dict, Any, Optional
 import requests
+import uvicorn
 
 from mcp.server.fastmcp import FastMCP
 
@@ -230,6 +231,11 @@ def parse_args():
     parser.add_argument("--server", type=str, default=DEFAULT_PST_SERVER, help=f"PST API server URL (default: {DEFAULT_PST_SERVER})")
     parser.add_argument("--timeout", type=int, default=DEFAULT_REQUEST_TIMEOUT, help=f"Request timeout in seconds (default: {DEFAULT_REQUEST_TIMEOUT})")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    # 新增参数
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="MCP server host (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8000, help="MCP server port (default: 8000)")
+    parser.add_argument("--path", type=str, default="/mcp", help="MCP server access path (default: /mcp)")
+    parser.add_argument("--transport", type=str, default="studio", choices=["studio", "sse", "http"], help="MCP server startup mode (default: studio)")
     return parser.parse_args()
 
 
@@ -254,8 +260,32 @@ def main():
                 logger.warning(f"Missing tools: {', '.join(missing)}")
 
     mcp = setup_mcp_server(pst_client)
-    logger.info("Starting PST MCP server")
-    mcp.run()
+    logger.info(f"Starting PST MCP server in {args.transport} mode")
+
+    transport_map = {
+        "studio": "stdio",
+        "sse": "sse",
+        "http": "streamable-http"
+    }
+    transport_mode = transport_map.get(args.transport)
+
+    if not transport_mode:
+        logger.error(f"Invalid startup mode: {args.transport}")
+        return
+
+    if transport_mode == 'sse':
+        app = mcp.sse_app()
+        uvicorn.run(app, host=args.host, port=args.port)
+    elif transport_mode == 'streamable-http':
+        app = mcp.streamable_http_app()
+        uvicorn.run(app, host=args.host, port=args.port)
+    else:
+        mcp.run(
+            host=args.host,
+            port=args.port,
+            path=args.path,
+            transport=transport_mode
+        )
 
 
 if __name__ == "__main__":

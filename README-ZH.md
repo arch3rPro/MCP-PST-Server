@@ -40,9 +40,9 @@
 
 ---
 
-## 🛠️ 安装
+## 🛠️ 快速安装配置
 
-### Pentest-Windows 机器上（将作为 PST 服务器）
+### PST 服务端（Pentest-Windows 机器上）
 ```bash
 git clone https://github.com/arch3rPro/MCP-PST-Server.git
 cd MCP-PST-Server
@@ -50,8 +50,8 @@ pip install -r requirements.txt
 python3 pst_server.py
 ```
 
-### MCP 客户端上（您可以在 Windows 或 Linux 上运行）
-- 您需要运行 `python /absolute/path/to/mcp_server.py http://WINDOWS_IP:5100`
+### MCP 客户端（您可以在 Windows 或 Linux 上运行）
+- 您需要运行 `python3 /absolute/path/to/mcp_server.py http://WINDOWS_IP:5100`
 
 #### Claude Desktop 配置：
 编辑 claude_desktop_config.json
@@ -98,7 +98,7 @@ python3 pst_server.py
    - `scoop bucket add ar https://github.com/arch3rPro/PST-Bucket`
 3. 安装工具（示例，按需精简/扩展）：
    - `scoop install nmap httpx ffuf feroxbuster fscan hydra hackbrowserdata`
-   - `scoop install subfinder dnsx naabu nuclei katana`
+   - `scoop install subfinder dnsx naabu nuclei katana bbot`
    - `scoop install masscan nikto gobuster john ehole`
    - `scoop install metasploit`（如不可用，参考官方安装包）
    - 可选：`pip install sqlmap`
@@ -106,20 +106,72 @@ python3 pst_server.py
 
 > 推荐：直接使用Pentest-Windows 环境镜像（含大量工具）：https://github.com/arch3rPro/Pentest-Windows
 
-## 启动 API 服务器
+## PST-API 配置选项
+
+PST API 服务器支持各种命令行选项进行配置：
+
+### 命令行选项
+
+```bash
+python pst_server.py [选项]
+```
+- `--host 主机`: 服务器主机地址（默认：0.0.0.0）
+- `--port 端口`: 服务器端口号（默认：5100）
+- `--timeout 秒数`: 命令执行超时时间，以秒为单位（默认：180）
+- `--debug`: 启用调试模式以获取详细日志
+
+### 启动 API 服务器
 
 - 进入目录：`/absolute/path/to/MCP-PST-Server`
-- 启动：
-  - `python pst_server.py --debug --port 5100`
+- 使用默认设置启动：
+  - `python pst_server.py`
+- 使用自定义设置启动：
+  - `python pst_server.py --host 0.0.0.0 --port 5100 --timeout 300 --debug`
 - 健康检查（PowerShell）：
   - `Invoke-RestMethod -Uri http://localhost:5100/health -Method GET`
 
-## 启动 MCP 客户端
+## MCP Server 配置选项
 
-- 启动 MCP：
-  - `python mcp_server.py --server http://localhost:5100 --debug`
+MCP 客户端支持多种传输模式，并可以使用各种参数进行配置：
 
-## 示例调用（API 服务器）
+### 传输模式
+
+1. **STDIO 模式（默认）**：标准输入/输出通信，适用于大多数 MCP 客户端，如 Claude Desktop
+2. **SSE 模式**：服务器发送事件传输，适用于基于 Web 的客户端
+3. **HTTP 模式**：直接 HTTP API 访问，适用于自定义集成
+
+### 命令行选项
+
+```bash
+python mcp_server.py [选项]
+```
+
+- `--server URL`: PST API 服务器 URL（默认：http://localhost:5100）
+- `--timeout 秒数`: 请求超时时间，以秒为单位（默认：300）
+- `--host 主机`: MCP 服务器主机（默认：127.0.0.1）
+- `--port 端口`: MCP 服务器端口（默认：8000）
+- `--path 路径`: stdio 模式的 MCP 服务器访问路径（默认：/mcp）
+- `--transport 模式`: 传输模式 - studio（stdio）、sse 或 http（默认：studio）
+- `--debug`: 启用调试日志
+
+### 启动 MCP 客户端
+
+- **STDIO 模式（默认）**：
+  ```bash
+  python3 mcp_server.py --server http://localhost:5100 --debug
+  ```
+
+- **SSE 模式**：
+  ```bash
+  python3 mcp_server.py --server http://localhost:5100 --transport sse --host 0.0.0.0 --port 8000 --path /sse
+  ```
+
+- **HTTP 模式**：
+  ```bash
+  python3 mcp_server.py --server http://localhost:5100 --transport http --host 0.0.0.0 --port 8000 --path /mcp
+  ```
+
+### 自定义集成配置（HTTP 模式）：
 
 - Nmap：
   ```powershell

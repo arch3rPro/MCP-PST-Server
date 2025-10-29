@@ -51,7 +51,7 @@ python3 pst_server.py
 ```
 
 ### On your MCP Client (You can run on Windows or Linux)
-- You will want to run `python /absolute/path/to/mcp_server.py http://WINDOWS_IP:5100`
+- You will want to run `python3 /absolute/path/to/mcp_server.py http://WINDOWS_IP:5100`
 
 #### Configuration for Claude Desktop:
 Edit claude_desktop_config.json
@@ -97,7 +97,7 @@ Edit claude_desktop_config.json
    - `scoop bucket add ar https://github.com/arch3rPro/PST-Bucket`
 3. Install tools (examples, streamline/expand as needed):
    - `scoop install nmap httpx ffuf feroxbuster fscan hydra hackbrowserdata`
-   - `scoop install subfinder dnsx naabu nuclei katana`
+   - `scoop install subfinder dnsx naabu nuclei katana bbot`
    - `scoop install masscan nikto gobuster john ehole`
    - `scoop install metasploit` (if not available, refer to official installer)
    - Optional: `pip install sqlmap`
@@ -107,18 +107,71 @@ Edit claude_desktop_config.json
 
 ## Starting the API Server
 
+The PST API Server supports various command-line options for configuration:
+
+### Command Line Options
+
+```bash
+python pst_server.py [options]
+```
+
+- `--host HOST`: Server host address (default: 0.0.0.0)
+- `--port PORT`: Server port number (default: 5100)
+- `--timeout SECONDS`: Command execution timeout in seconds (default: 180)
+- `--debug`: Enable debug mode for detailed logging
+
+### Starting the API Server with custom options
+
 - Navigate to directory: `/absolute/path/to/MCP-PST-Server`
-- Start:
-  - `python pst_server.py --debug --port 5100`
+- Start with default settings:
+  - `python pst_server.py`
+- Start with custom settings:
+  - `python pst_server.py --host 0.0.0.0 --port 5100 --timeout 300 --debug`
 - Health Check (PowerShell):
   - `Invoke-RestMethod -Uri http://localhost:5100/health -Method GET`
 
-## Starting the MCP Client
+## Starting the MCP Server with custom options
 
-- Start MCP:
-  - `python mcp_server.py --server http://localhost:5100 --debug`
+The MCP Server supports multiple transport modes and can be configured with various parameters:
 
-## Example API Calls (API Server)
+### Transport Modes
+
+1. **STDIO Mode (Default)**: Standard input/output communication, ideal for most MCP clients like Claude Desktop
+2. **SSE Mode**: Server-Sent Events transport, useful for web-based clients
+3. **HTTP Mode**: Direct HTTP API access, suitable for custom integrations
+
+### Command Line Options
+
+```bash
+python mcp_server.py [options]
+```
+
+- `--server URL`: PST API server URL (default: http://localhost:5100)
+- `--timeout SECONDS`: Request timeout in seconds (default: 300)
+- `--host HOST`: MCP server host (default: 127.0.0.1)
+- `--port PORT`: MCP server port (default: 8000)
+- `--path PATH`: MCP server access path for stdio mode (default: /mcp)
+- `--transport MODE`: Transport mode - studio (stdio), sse, or http (default: studio)
+- `--debug`: Enable debug logging
+
+### Starting the MCP Server
+
+- **STDIO Mode (Default)**:
+  ```bash
+  python3 mcp_server.py --server http://localhost:5100 --debug
+  ```
+
+- **SSE Mode**:
+  ```bash
+  python3 mcp_server.py --server http://localhost:5100 --transport sse --host 0.0.0.0 --port 8000 --path /sse
+  ```
+
+- **HTTP Mode**:
+  ```bash
+  python3 mcp_server.py --server http://localhost:5100 --transport http --host 0.0.0.0 --port 8000 --path /mcp
+  ```
+
+### Configuration for Custom Integrations (HTTP Mode):
 
 - Nmap:
   ```powershell
