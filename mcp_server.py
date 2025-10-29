@@ -111,25 +111,131 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         return pst_client.safe_post("api/tools/nmap", data)
 
     @mcp.tool()
-    def httpx_probe(target: str = "", list_file: str = "", additional_args: str = "-status -title -tech-detect") -> Dict[str, Any]:
-        data = {"target": target, "list_file": list_file, "additional_args": additional_args}
-        return pst_client.safe_post("api/tools/httpx", data)
+    def httpx_probe(
+        target: str = "",
+        list_file: str = "",
+        status_code: bool = True,
+        title: bool = False,
+        tech_detect: bool = False,
+        silent: bool = False,
+        output_file: str = "",
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        post_data = {
+            "target": target,
+            "list_file": list_file,
+            "status_code": "1" if status_code else "",
+            "title": "1" if title else "",
+            "tech_detect": "1" if tech_detect else "",
+            "silent": "1" if silent else "",
+            "output_file": output_file,
+            "additional_args": additional_args
+        }
+        return pst_client.safe_post("api/tools/httpx", post_data)
 
     @mcp.tool()
-    def ffuf_scan(url: str, wordlist: str, additional_args: str = "") -> Dict[str, Any]:
-        data = {"url": url, "wordlist": wordlist, "additional_args": additional_args}
-        return pst_client.safe_post("api/tools/ffuf", data)
+    def ffuf_scan(
+        url: str,
+        wordlist: str,
+        method: str = "GET",
+        data: str = "",
+        headers: str = "",
+        extensions: str = "",
+        match_status: str = "200,204,301,302,307,401,403,405,500",
+        filter_status: str = "",
+        filter_size: str = "",
+        threads: str = "40",
+        recursion: bool = False,
+        output_file: str = "",
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        post_data = {
+            "url": url,
+            "wordlist": wordlist,
+            "method": method,
+            "data": data,
+            "headers": headers,
+            "extensions": extensions,
+            "match_status": match_status,
+            "filter_status": filter_status,
+            "filter_size": filter_size,
+            "threads": threads,
+            "recursion": "1" if recursion else "",
+            "output_file": output_file,
+            "additional_args": additional_args
+        }
+        return pst_client.safe_post("api/tools/ffuf", post_data)
 
     @mcp.tool()
-    def feroxbuster_scan(url: str, wordlist: str = "", additional_args: str = "") -> Dict[str, Any]:
-        data = {"url": url, "wordlist": wordlist, "additional_args": additional_args}
-        return pst_client.safe_post("api/tools/feroxbuster", data)
+    def feroxbuster_scan(
+        url: str = "",
+        extensions: str = "",
+        methods: str = "",
+        headers: str = "",
+        cookies: str = "",
+        status_codes: str = "",
+        threads: str = "",
+        no_recursion: bool = False,
+        depth: str = "",
+        wordlist: str = "",
+        rate_limit: str = "",
+        time_limit: str = "",
+        silent: bool = False,
+        json: bool = False,
+        output: str = "",
+        burp: bool = False,
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        post_data = {
+            "url": url,
+            "extensions": extensions,
+            "methods": methods,
+            "headers": headers,
+            "cookies": cookies,
+            "status_codes": status_codes,
+            "threads": threads,
+            "no_recursion": "1" if no_recursion else "",
+            "depth": depth,
+            "wordlist": wordlist,
+            "rate_limit": rate_limit,
+            "time_limit": time_limit,
+            "silent": "1" if silent else "",
+            "json": "1" if json else "",
+            "output": output,
+            "burp": "1" if burp else "",
+            "additional_args": additional_args
+        }
+        return pst_client.safe_post("api/tools/feroxbuster", post_data)
 
     # 内网综合扫描与爆破
     @mcp.tool()
-    def fscan_network(target: str, additional_args: str = "") -> Dict[str, Any]:
-        data = {"target": target, "additional_args": additional_args}
-        return pst_client.safe_post("api/tools/fscan", data)
+    def fscan_network(
+        target: str,
+        ports: str = "",
+        username: str = "",
+        password: str = "",
+        scan_mode: str = "All",
+        threads: str = "60",
+        timeout: str = "3",
+        url: str = "",
+        proxy: str = "",
+        output_file: str = "result.txt",
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        post_data = {
+            "target": target,
+            "ports": ports,
+            "username": username,
+            "password": password,
+            "scan_mode": scan_mode,
+            "threads": threads,
+            "timeout": timeout,
+            "url": url,
+            "proxy": proxy,
+            "output_file": output_file,
+            "additional_args": additional_args
+        }
+        return pst_client.safe_post("api/tools/fscan", post_data)
 
     @mcp.tool()
     def hydra_attack(target: str, service: str, username: str = "", username_file: str = "", password: str = "", password_file: str = "", additional_args: str = "") -> Dict[str, Any]:
@@ -197,33 +303,12 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         risk: str = "1",
         dbms: str = "",
         technique: str = "BEUST",
-        os: str = "",
         batch: bool = True,
         threads: str = "1",
-        timeout: str = "30",
-        retries: str = "3",
-        tamper: str = "",
-        random_agent: bool = False,
-        auth_type: str = "",
-        auth_cred: str = "",
+        dbs: bool = False,
         tables: bool = False,
         columns: bool = False,
         dump: bool = False,
-        dump_all: bool = False,
-        dbs: bool = False,
-        current_user: bool = False,
-        current_db: bool = False,
-        is_dba: bool = False,
-        users: bool = False,
-        passwords: bool = False,
-        privileges: bool = False,
-        roles: bool = False,
-        sql_query: str = "",
-        sql_shell: bool = False,
-        os_shell: bool = False,
-        file_read: str = "",
-        file_write: str = "",
-        file_dest: str = "",
         additional_args: str = ""
     ) -> Dict[str, Any]:
         post_data = {
@@ -236,33 +321,12 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
             "risk": risk,
             "dbms": dbms,
             "technique": technique,
-            "os": os,
             "batch": "1" if batch else "",
             "threads": threads,
-            "timeout": timeout,
-            "retries": retries,
-            "tamper": tamper,
-            "random_agent": "1" if random_agent else "",
-            "auth_type": auth_type,
-            "auth_cred": auth_cred,
+            "dbs": "1" if dbs else "",
             "tables": "1" if tables else "",
             "columns": "1" if columns else "",
             "dump": "1" if dump else "",
-            "dump_all": "1" if dump_all else "",
-            "dbs": "1" if dbs else "",
-            "current_user": "1" if current_user else "",
-            "current_db": "1" if current_db else "",
-            "is_dba": "1" if is_dba else "",
-            "users": "1" if users else "",
-            "passwords": "1" if passwords else "",
-            "privileges": "1" if privileges else "",
-            "roles": "1" if roles else "",
-            "sql_query": sql_query,
-            "sql_shell": "1" if sql_shell else "",
-            "os_shell": "1" if os_shell else "",
-            "file_read": file_read,
-            "file_write": file_write,
-            "file_dest": file_dest,
             "additional_args": additional_args
         }
         return pst_client.safe_post("api/tools/sqlmap", post_data)
@@ -337,39 +401,27 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
 
         ## 常用扫描场景
 
-        ### 1. 快速基本扫描
+        ### 1. 基本扫描
         ```python
         nmap_scan(target="192.168.1.1")
         ```
 
-        ### 2. 隐蔽扫描
+        ### 2. 端口扫描
         ```python
-        nmap_scan(target="192.168.1.1", scan_type="-sS", timing="T2")
+        nmap_scan(target="192.168.1.1", ports="1-1000")
         ```
 
-        ### 3. 全面扫描
+        ### 3. 服务识别
         ```python
-        nmap_scan(target="192.168.1.1", os_detection="-O", script_scan="default")
+        nmap_scan(target="192.168.1.1", scan_type="-sV")
         ```
 
-        ### 4. UDP扫描
-        ```python
-        nmap_scan(target="192.168.1.1", scan_type="-sU", timing="T5")
-        ```
-
-        ### 5. 漏洞扫描
-        ```python
-        nmap_scan(target="192.168.1.1", script_scan="vuln")
-        ```
-
-        ## 主要参数说明
+        ## 核心参数说明
 
         - target (必需): 扫描目标(IP/域名/CIDR)
-        - scan_type: 扫描类型("-sS"=SYN扫描, "-sU"=UDP扫描, "-sV"=服务版本检测)
+        - scan_type: 扫描类型("-sS"=SYN扫描, "-sV"=服务版本检测)
         - ports: 端口范围(如"1-1000"或"22,80,443")
         - timing: 时序模板("T0"最慢最隐蔽, "T5"最快最易检测)
-        - ping_scan: Ping选项("-Pn"跳过主机发现)
-        - os_detection: 操作系统检测("-O"启用)
         - script_scan: 脚本扫描("default"默认, "vuln"漏洞扫描)
         - output_format: 输出格式("-oN"文本, "-oX"XML)
 
@@ -377,8 +429,7 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
 
         1. 确保已获得扫描授权
         2. 激进扫描可能触发警报
-        3. UDP扫描比TCP慢得多
-        4. 脚本扫描显著增加扫描时间
+        3. 使用additional_args参数可添加更多高级功能
         """
 
     # SQLMap注入测试提示词
@@ -398,8 +449,7 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         ```python
         sqlmap_scan(
             url="http://example.com/login.php",
-            data="username=admin&password=123",
-            cookie="PHPSESSID=abcdef123456"
+            data="username=admin&password=123"
         )
         ```
 
@@ -408,100 +458,255 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         sqlmap_scan(
             url="http://example.com/page.php?id=1",
             dbs=True,
-            tables=True,
-            columns=True
+            tables=True
         )
         ```
 
-        ### 4. 数据提取
-        ```python
-        sqlmap_scan(
-            url="http://example.com/page.php?id=1",
-            dbms="mysql",
-            dump=True,
-            tables=True,
-            columns=True
-        )
-        ```
-
-        ### 5. 高级注入技术
-        ```python
-        sqlmap_scan(
-            url="http://example.com/page.php?id=1",
-            technique="BEUST",
-            level="3",
-            risk="2",
-            tamper="space2comment"
-        )
-        ```
-
-        ### 6. 获取系统权限
-        ```python
-        sqlmap_scan(
-            url="http://example.com/page.php?id=1",
-            os_shell=True,
-            is_dba=True
-        )
-        ```
-
-        ## 主要参数说明
+        ## 核心参数说明
 
         ### 目标与请求参数
         - url (必需): 目标URL
         - data: POST请求数据
         - cookie: HTTP Cookie
         - headers: 自定义HTTP头
-        - proxy: 代理服务器
 
         ### 检测与注入参数
         - level: 测试等级(1-5, 默认1)
         - risk: 风险等级(1-3, 默认1)
         - dbms: 指定数据库类型(mysql, oracle, postgresql等)
-        - technique: 注入技术(B=布尔盲注, E=报错注入, U=UNION查询, S=堆叠查询, T=时间盲注)
-        - os: 指定操作系统(windows, linux)
-
-        ### 性能与优化参数
-        - batch: 批处理模式(默认True)
-        - threads: 线程数(默认1)
-        - timeout: 超时时间(默认30秒)
-        - retries: 重试次数(默认3)
-        - tamper: 使用混淆脚本
-        - random_agent: 随机User-Agent
-
-        ### 认证参数
-        - auth_type: 认证类型(basic, digest, ntlm)
-        - auth_cred: 认证凭证
 
         ### 数据枚举参数
         - dbs: 枚举所有数据库
         - tables: 枚举数据库表
         - columns: 枚举表列
         - dump: 转储表数据
-        - dump_all: 转储所有数据库
-        - current_user: 获取当前用户
-        - current_db: 获取当前数据库
-        - is_dba: 检测是否为DBA
-        - users: 枚举数据库用户
-        - passwords: 获取密码哈希
-        - privileges: 获取用户权限
-        - roles: 获取用户角色
-
-        ### 高级功能参数
-        - sql_query: 执行自定义SQL查询
-        - sql_shell: 启动交互式SQL shell
-        - os_shell: 启动操作系统shell
-        - file_read: 读取服务器文件
-        - file_write: 写入文件到服务器
-        - file_dest: 文件写入目标路径
 
         ## 注意事项
 
         1. 仅在授权范围内使用SQLMap
         2. 高风险等级可能导致目标系统不稳定
         3. 数据转储操作可能产生大量数据
-        4. 获取系统权限是高风险操作，需谨慎使用
-        5. 建议在测试环境中先验证参数组合
-        6. 使用代理保护身份，避免直接连接
+        4. 使用additional_args参数可添加更多高级功能
+        """
+
+    # FFUF Web模糊测试提示词
+    @mcp.prompt()
+    def ffuf_scan_guide() -> str:
+        """
+        # FFUF Web模糊测试指南
+
+        ## 常用扫描场景
+
+        ### 1. 基本目录发现
+        ```python
+        ffuf_scan(url="http://example.com/FUZZ", wordlist="/path/to/directory-wordlist.txt")
+        ```
+
+        ### 2. 虚拟主机发现
+        ```python
+        ffuf_scan(
+            url="http://example.com",
+            wordlist="/path/to/subdomains.txt",
+            headers="Host: FUZZ.example.com"
+        )
+        ```
+
+        ### 3. POST数据模糊测试
+        ```python
+        ffuf_scan(
+            url="http://example.com/login.php",
+            method="POST",
+            data="username=admin&password=FUZZ",
+            wordlist="/path/to/passwords.txt"
+        )
+        ```
+
+        ## 核心参数说明
+
+        ### 目标与请求参数
+        - url (必需): 目标URL，使用FUZZ关键字标记模糊测试位置
+        - wordlist (必需): 词表文件路径
+        - method: HTTP请求方法(默认GET)
+        - data: POST请求数据
+        - headers: 自定义HTTP头
+        - extensions: 文件扩展名，多个用逗号分隔
+
+        ### 匹配与过滤条件
+        - match_status: 匹配的HTTP状态码，多个用逗号分隔
+        - filter_status: 过滤的HTTP状态码
+        - filter_size: 过滤的响应大小
+
+        ### 性能控制
+        - threads: 并发线程数，默认为40
+
+        ## 注意事项
+
+        1. FUZZ关键字是ffuf的核心，必须在URL或请求数据中指定它作为模糊测试的位置
+        2. 使用适当的匹配和过滤条件可以大大减少噪音，提高扫描效率
+        3. 递归扫描可能会产生大量请求，请谨慎使用
+        4. 使用additional_args参数可添加更多高级功能
+        """
+
+    # HTTPX HTTP探测提示词
+    @mcp.prompt()
+    def httpx_probe_guide() -> str:
+        """
+        # HTTPX HTTP探测指南
+
+        ## 常用探测场景
+
+        ### 1. 基本HTTP探测
+        ```python
+        httpx_probe(url="http://example.com")
+        ```
+
+        ### 2. 批量目标探测
+        ```python
+        httpx_probe(
+            url="http://example.com",
+            silent=True,
+            output_file="results.txt"
+        )
+        ```
+
+        ### 3. 技术指纹识别
+        ```python
+        httpx_probe(
+            url="http://example.com",
+            tech_detect=True,
+            status_code=True,
+            title=True
+        )
+        ```
+
+        ## 核心参数说明
+
+        ### 输入选项
+        - url (必需): 目标URL或URL列表文件
+
+        ### 探测选项
+        - status_code: 显示HTTP状态码
+        - title: 显示页面标题
+        - tech_detect: 启用技术指纹识别
+
+        ### 输出选项
+        - silent: 静默模式，减少输出
+        - output_file: 结果输出文件路径
+
+        ## 注意事项
+
+        1. HTTPX支持多种输入格式，包括单个URL、URL列表文件
+        2. 技术指纹识别功能可以帮助识别目标使用的技术栈
+        3. 使用additional_args参数可添加更多高级功能
+        """
+
+    @mcp.prompt()
+    def feroxbuster_scan_guide() -> str:
+        """
+        # Feroxbuster目录扫描指南
+
+        ## 常用扫描场景
+
+        ### 1. 基本目录扫描
+        ```python
+        feroxbuster_scan(url="http://example.com", wordlist="/path/to/wordlist.txt")
+        ```
+
+        ### 2. 递归扫描指定深度
+        ```python
+        feroxbuster_scan(
+            url="http://example.com",
+            wordlist="/path/to/wordlist.txt",
+            depth=2,
+            extensions="php,html,txt"
+        )
+        ```
+
+        ### 3. 使用多种文件扩展名
+        ```python
+        feroxbuster_scan(
+            url="http://example.com",
+            wordlist="/path/to/wordlist.txt",
+            extensions="php,asp,aspx,jsp,html,txt"
+        )
+        ```
+
+        ## 核心参数说明
+
+        ### 基本参数
+        - url (必需): 目标URL
+        - wordlist: 词表文件路径
+
+        ### 扫描控制
+        - extensions: 文件扩展名，多个用逗号分隔
+        - threads: 并发线程数
+        - depth: 递归扫描深度
+        - rate_limit: 每秒请求数限制
+        - time_limit: 扫描时间限制
+
+        ### 输出设置
+        - output: 结果输出文件路径
+        - json: 以JSON格式输出结果
+
+        ### 扩展参数
+        - additional_args: 额外的命令行参数
+
+        ## 注意事项
+
+        1. 递归扫描可能会产生大量请求，建议设置合理的深度限制
+        2. 使用适当的线程数和速率限制可以避免触发目标防护机制
+        3. 使用additional_args参数可添加更多高级功能
+        """
+
+    @mcp.prompt()
+    def fscan_network_guide() -> str:
+        """
+        # Fscan网络扫描指南
+
+        ## 常用扫描场景
+
+        ### 1. 基本端口扫描
+        ```python
+        fscan_network(target="192.168.1.1/24")
+        ```
+
+        ### 2. 详细服务识别
+        ```python
+        fscan_network(
+            target="192.168.1.1",
+            ports="1-1000",
+            scan_mode="Port"
+        )
+        ```
+
+        ### 3. 扫描结果保存
+        ```python
+        fscan_network(
+            target="192.168.1.1/24",
+            output_file="scan_results.txt"
+        )
+        ```
+
+        ## 核心参数说明
+
+        ### 基本参数
+        - target (必需): 目标IP地址、IP段或域名
+
+        ### 扫描选项
+        - ports: 端口范围，例如"1-1000"或"80,443,8080"
+        - scan_mode: 扫描模式，默认为All
+
+        ### 输出选项
+        - output_file: 结果输出文件路径
+
+        ### 扩展参数
+        - additional_args: 额外的命令行参数
+
+        ## 注意事项
+
+        1. 端口扫描可能会被防火墙或入侵检测系统检测到
+        2. 大规模扫描建议使用output_file参数保存结果
+        3. 使用additional_args参数可添加更多高级功能
         """
 
     return mcp
