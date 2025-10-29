@@ -76,8 +76,38 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
 
     # 基础网络与目录枚举
     @mcp.tool()
-    def nmap_scan(target: str, scan_type: str = "-sV", ports: str = "", additional_args: str = "-T4 -Pn") -> Dict[str, Any]:
-        data = {"target": target, "scan_type": scan_type, "ports": ports, "additional_args": additional_args}
+    def nmap_scan(
+        target: str, 
+        scan_type: str = "-sV", 
+        ports: str = "", 
+        timing: str = "T4",
+        ping_scan: str = "-Pn",
+        os_detection: str = "",
+        service_detection: str = "",
+        script_scan: str = "",
+        script_args: str = "",
+        output_format: str = "",
+        output_file: str = "",
+        min_rate: str = "",
+        max_rate: str = "",
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        data = {
+            "target": target, 
+            "scan_type": scan_type, 
+            "ports": ports, 
+            "timing": timing,
+            "ping_scan": ping_scan,
+            "os_detection": os_detection,
+            "service_detection": service_detection,
+            "script_scan": script_scan,
+            "script_args": script_args,
+            "output_format": output_format,
+            "output_file": output_file,
+            "min_rate": min_rate,
+            "max_rate": max_rate,
+            "additional_args": additional_args
+        }
         return pst_client.safe_post("api/tools/nmap", data)
 
     @mcp.tool()
@@ -222,6 +252,58 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
     @mcp.tool()
     def pst_installed_tools() -> Dict[str, Any]:
         return pst_client.safe_get("api/catalog/installed")
+
+    # Nmap扫描提示词
+    @mcp.prompt()
+    def nmap_scan_guide() -> str:
+        """
+        # Nmap端口扫描指南
+
+        ## 常用扫描场景
+
+        ### 1. 快速基本扫描
+        ```python
+        nmap_scan(target="192.168.1.1")
+        ```
+
+        ### 2. 隐蔽扫描
+        ```python
+        nmap_scan(target="192.168.1.1", scan_type="-sS", timing="T2")
+        ```
+
+        ### 3. 全面扫描
+        ```python
+        nmap_scan(target="192.168.1.1", os_detection="-O", script_scan="default")
+        ```
+
+        ### 4. UDP扫描
+        ```python
+        nmap_scan(target="192.168.1.1", scan_type="-sU", timing="T5")
+        ```
+
+        ### 5. 漏洞扫描
+        ```python
+        nmap_scan(target="192.168.1.1", script_scan="vuln")
+        ```
+
+        ## 主要参数说明
+
+        - target (必需): 扫描目标(IP/域名/CIDR)
+        - scan_type: 扫描类型("-sS"=SYN扫描, "-sU"=UDP扫描, "-sV"=服务版本检测)
+        - ports: 端口范围(如"1-1000"或"22,80,443")
+        - timing: 时序模板("T0"最慢最隐蔽, "T5"最快最易检测)
+        - ping_scan: Ping选项("-Pn"跳过主机发现)
+        - os_detection: 操作系统检测("-O"启用)
+        - script_scan: 脚本扫描("default"默认, "vuln"漏洞扫描)
+        - output_format: 输出格式("-oN"文本, "-oX"XML)
+
+        ## 注意事项
+
+        1. 确保已获得扫描授权
+        2. 激进扫描可能触发警报
+        3. UDP扫描比TCP慢得多
+        4. 脚本扫描显著增加扫描时间
+        """
 
     return mcp
 

@@ -68,13 +68,67 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         target = data.get("target", "")
         scan_type = data.get("scan_type", "-sV")
         ports = data.get("ports", "")
+        timing = data.get("timing", "T4")
+        ping_scan = data.get("ping_scan", "-Pn")
+        os_detection = data.get("os_detection", "")
+        service_detection = data.get("service_detection", "")
+        script_scan = data.get("script_scan", "")
+        script_args = data.get("script_args", "")
+        output_format = data.get("output_format", "")
+        output_file = data.get("output_file", "")
+        min_rate = data.get("min_rate", "")
+        max_rate = data.get("max_rate", "")
+        
         cmd = ["nmap"]
+        
+        # 添加扫描类型
         if scan_type:
             cmd += [scan_type]
+            
+        # 添加时序模板
+        if timing:
+            cmd += [f"-{timing}"]
+            
+        # 添加ping扫描选项
+        if ping_scan:
+            cmd += [ping_scan]
+            
+        # 添加操作系统检测
+        if os_detection:
+            cmd += [os_detection]
+            
+        # 添加服务检测
+        if service_detection:
+            cmd += [service_detection]
+            
+        # 添加脚本扫描
+        if script_scan:
+            cmd += ["--script", script_scan]
+            
+        # 添加脚本参数
+        if script_args:
+            cmd += ["--script-args", script_args]
+            
+        # 添加端口范围
         if ports:
             cmd += ["-p", ports]
+            
+        # 添加输出格式和文件
+        if output_format and output_file:
+            cmd += [f"{output_format}", output_file]
+        elif output_format:
+            cmd += [output_format]
+            
+        # 添加发包速率限制
+        if min_rate:
+            cmd += ["--min-rate", min_rate]
+        if max_rate:
+            cmd += ["--max-rate", max_rate]
+            
+        # 添加目标
         if target:
             cmd += [target]
+            
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "httpx":
