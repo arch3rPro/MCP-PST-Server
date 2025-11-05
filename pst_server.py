@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import platform
 import re
 import shlex
 import subprocess
@@ -51,7 +52,7 @@ def supported_tools() -> List[str]:
     return [
         "nmap", "httpx", "ffuf", "feroxbuster", "fscan", "hydra", "hackbrowserdata",
         "subfinder", "dnsx", "naabu", "nuclei", "katana", "afrog", "sqlmap",
-        "metasploit", "john", "nikto", "gobuster", "masscan", "netcat", "ehole", "bbot",
+        "metasploit", "john", "nikto", "gobuster", "masscan", "netcat", "ehole", "bbot", "amass", "enscan", "searchsploit", "githacker", "gowitness",
     ]
 
 ESSENTIAL_TOOLS = ["nmap", "httpx", "subfinder", "dnsx", "naabu", "nuclei", "ffuf", "feroxbuster", "fscan", "hydra"]
@@ -134,32 +135,255 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
     if tool == "httpx":
         target = data.get("target", "")
         list_file = data.get("list_file", "")
-        cmd = ["httpx"]
+        status_code = data.get("status_code", True)
+        title = data.get("title", True)
+        tech_detect = data.get("tech_detect", True)
+        content_length = data.get("content_length", False)
+        jarm = data.get("jarm", False)
+        follow_redirects = data.get("follow_redirects", False)
+        
+        cmd = ["httpx", "-silent"]
+        
+        # Add status code flag
+        if status_code:
+            cmd += ["-status-code"]
+        
+        # Add title flag
+        if title:
+            cmd += ["-title"]
+        
+        # Add technology detection flag
+        if tech_detect:
+            cmd += ["-tech-detect"]
+        
+        # Add content length flag
+        if content_length:
+            cmd += ["-content-length"]
+        
+        # Add JARM flag
+        if jarm:
+            cmd += ["-jarm"]
+        
+        # Add follow redirects flag
+        if follow_redirects:
+            cmd += ["-follow-redirects"]
+        
+        # Add target or list file
         if list_file:
             cmd += ["-l", list_file]
         elif target:
             cmd += ["-u", target]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "ffuf":
         url = data.get("url", "")
         wordlist = data.get("wordlist", "")
-        cmd = ["ffuf", "-u", url]
+        method = data.get("method", "GET")
+        headers = data.get("headers", "")
+        post_data = data.get("data", "")
+        cookies = data.get("cookies", "")
+        match_status = data.get("match_status", "")
+        filter_status = data.get("filter_status", "")
+        match_size = data.get("match_size", "")
+        filter_size = data.get("filter_size", "")
+        match_words = data.get("match_words", "")
+        filter_words = data.get("filter_words", "")
+        
+        cmd = ["ffuf"]
+        
+        # Add URL with FUZZ keyword
+        if url:
+            cmd += ["-u", url]
+        
+        # Add wordlist
         if wordlist:
             cmd += ["-w", wordlist]
+        
+        # Add HTTP method
+        if method:
+            cmd += ["-X", method]
+        
+        # Add headers
+        if headers:
+            for header in headers.split(","):
+                header = header.strip()
+                if header:
+                    cmd += ["-H", header]
+        
+        # Add POST data
+        if post_data:
+            cmd += ["-d", post_data]
+        
+        # Add cookies
+        if cookies:
+            cmd += ["-b", cookies]
+        
+        # Add match status codes
+        if match_status:
+            cmd += ["-mc", match_status]
+        
+        # Add filter status codes
+        if filter_status:
+            cmd += ["-fc", filter_status]
+        
+        # Add match response size
+        if match_size:
+            cmd += ["-ms", match_size]
+        
+        # Add filter response size
+        if filter_size:
+            cmd += ["-fs", filter_size]
+        
+        # Add match response words
+        if match_words:
+            cmd += ["-mw", match_words]
+        
+        # Add filter response words
+        if filter_words:
+            cmd += ["-fw", filter_words]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "feroxbuster":
         url = data.get("url", "")
+        extensions = data.get("extensions", "")
+        methods = data.get("methods", "")
+        headers = data.get("headers", "")
+        cookies = data.get("cookies", "")
+        status_codes = data.get("status_codes", "")
+        threads = data.get("threads", "")
+        no_recursion = data.get("no_recursion", False)
+        depth = data.get("depth", "")
         wordlist = data.get("wordlist", "")
-        cmd = ["feroxbuster", "-u", url]
+        rate_limit = data.get("rate_limit", "")
+        time_limit = data.get("time_limit", "")
+        silent = data.get("silent", False)
+        json = data.get("json", False)
+        output = data.get("output", "")
+        burp = data.get("burp", False)
+        
+        cmd = ["feroxbuster"]
+        
+        # Add URL
+        if url:
+            cmd += ["-u", url]
+        
+        # Add extensions
+        if extensions:
+            cmd += ["-x", extensions]
+        
+        # Add HTTP methods
+        if methods:
+            cmd += ["-m", methods]
+        
+        # Add headers
+        if headers:
+            for header in headers.split(","):
+                header = header.strip()
+                if header:
+                    cmd += ["-H", header]
+        
+        # Add cookies
+        if cookies:
+            cmd += ["-C", cookies]
+        
+        # Add status codes
+        if status_codes:
+            cmd += ["-s", status_codes]
+        
+        # Add threads
+        if threads:
+            cmd += ["-t", threads]
+        
+        # Add no recursion flag
+        if no_recursion:
+            cmd += ["-n"]
+        
+        # Add recursion depth
+        if depth:
+            cmd += ["--depth", depth]
+        
+        # Add wordlist
         if wordlist:
             cmd += ["-w", wordlist]
+        
+        # Add rate limit
+        if rate_limit:
+            cmd += ["--rate-limit", rate_limit]
+        
+        # Add time limit
+        if time_limit:
+            cmd += ["--time-limit", time_limit]
+        
+        # Add silent flag
+        if silent:
+            cmd += ["-q"]
+        
+        # Add JSON output flag
+        if json:
+            cmd += ["-j"]
+        
+        # Add output file
+        if output:
+            cmd += ["-o", output]
+        
+        # Add Burp flag
+        if burp:
+            cmd += ["--burp"]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "fscan":
         target = data.get("target", "")
+        ports = data.get("ports", "")
+        username = data.get("username", "")
+        password = data.get("password", "")
+        scan_mode = data.get("scan_mode", "All")
+        threads = data.get("threads", "60")
+        timeout = data.get("timeout", "3")
+        url = data.get("url", "")
+        proxy = data.get("proxy", "")
+        output_file = data.get("output_file", "result.txt")
+        
         cmd = ["fscan", "-h", target]
+        
+        # Add ports
+        if ports:
+            cmd += ["-p", ports]
+        
+        # Add username
+        if username:
+            cmd += ["-user", username]
+        
+        # Add password
+        if password:
+            cmd += ["-pwd", password]
+        
+        # Add scan mode
+        if scan_mode:
+            cmd += ["-m", scan_mode]
+        
+        # Add threads
+        if threads:
+            cmd += ["-t", threads]
+        
+        # Add timeout
+        if timeout:
+            cmd += ["-time", timeout]
+        
+        # Add URL
+        if url:
+            cmd += ["-url", url]
+        
+        # Add proxy
+        if proxy:
+            cmd += ["-proxy", proxy]
+        
+        # Add output file
+        if output_file:
+            cmd += ["-o", output_file]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "hydra":
@@ -169,25 +393,41 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         username_file = data.get("username_file", "")
         password = data.get("password", "")
         password_file = data.get("password_file", "")
+        
         cmd = ["hydra"]
+        
+        # Add username or username file
         if username_file:
             cmd += ["-L", username_file]
         elif username:
             cmd += ["-l", username]
+        
+        # Add password or password file
         if password_file:
             cmd += ["-P", password_file]
         elif password:
             cmd += ["-p", password]
-        if target:
+        
+        # Add target and service
+        if target and service:
             cmd += [f"{service}://{target}"]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "hackbrowserdata":
-        output_dir = data.get("output_dir", os.getcwd())
         browser = data.get("browser", "")
-        cmd = ["hackbrowserdata", "-o", output_dir, "-f"]
+        output_dir = data.get("output_dir", "./hbdata_output")
+        
+        cmd = ["hackbrowserdata"]
+        
+        # Add output directory
+        if output_dir:
+            cmd += ["-o", output_dir]
+        
+        # Add browser
         if browser:
             cmd += ["-b", browser]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "subfinder":
@@ -269,9 +509,78 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
     if tool == "sqlmap":
         url = data.get("url", "")
         post_data = data.get("data", "")
-        cmd = [sys.executable, "-m", "sqlmap", "-u", url, "--batch"]
+        cookie = data.get("cookie", "")
+        headers = data.get("headers", "")
+        proxy = data.get("proxy", "")
+        level = data.get("level", "1")
+        risk = data.get("risk", "1")
+        dbms = data.get("dbms", "")
+        technique = data.get("technique", "BEUST")
+        batch = data.get("batch", True)
+        threads = data.get("threads", "1")
+        dbs = data.get("dbs", False)
+        tables = data.get("tables", False)
+        columns = data.get("columns", False)
+        dump = data.get("dump", False)
+        
+        cmd = [sys.executable, "-m", "sqlmap", "-u", url]
+        
+        # Add POST data
         if post_data:
             cmd += ["--data", post_data]
+        
+        # Add cookie
+        if cookie:
+            cmd += ["--cookie", cookie]
+        
+        # Add headers
+        if headers:
+            cmd += ["--headers", headers]
+        
+        # Add proxy
+        if proxy:
+            cmd += ["--proxy", proxy]
+        
+        # Add level
+        if level:
+            cmd += ["--level", str(level)]
+        
+        # Add risk
+        if risk:
+            cmd += ["--risk", str(risk)]
+        
+        # Add DBMS
+        if dbms:
+            cmd += ["--dbms", dbms]
+        
+        # Add technique
+        if technique:
+            cmd += ["--technique", technique]
+        
+        # Add batch mode
+        if batch:
+            cmd += ["--batch"]
+        
+        # Add threads
+        if threads:
+            cmd += ["--threads", str(threads)]
+        
+        # Add dbs flag
+        if dbs:
+            cmd += ["--dbs"]
+        
+        # Add tables flag
+        if tables:
+            cmd += ["--tables"]
+        
+        # Add columns flag
+        if columns:
+            cmd += ["--columns"]
+        
+        # Add dump flag
+        if dump:
+            cmd += ["--dump"]
+        
         return add_args(cmd, data.get("additional_args", ""))
 
     if tool == "ehole":
@@ -443,6 +752,520 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         
         return add_args(cmd, data.get("additional_args", ""))
 
+    if tool == "amass":
+        target = data.get("target", "")
+        mode = data.get("mode", "enum")
+        passive = data.get("passive", False)
+        active = data.get("active", True)
+        brute = data.get("brute", False)
+        min_for_recursive = data.get("min_for_recursive", 1)
+        max_dns_queries = data.get("max_dns_queries", 10000)
+        timeout = data.get("timeout", 30)
+        include_unresolvable = data.get("include_unresolvable", False)
+        output_file = data.get("output_file", "")
+        
+        cmd = ["amass", mode]
+        
+        # Add target
+        if target:
+            cmd += ["-d", target]
+        
+        # Add passive mode
+        if passive:
+            cmd += ["-passive"]
+        
+        # Add active mode
+        if active:
+            cmd += ["-active"]
+        
+        # Add brute force
+        if brute:
+            cmd += ["-brute"]
+        
+        # Add minimum for recursive
+        if min_for_recursive:
+            cmd += ["-min-for-recursive", str(min_for_recursive)]
+        
+        # Add max DNS queries
+        if max_dns_queries:
+            cmd += ["-max-dns-queries", str(max_dns_queries)]
+        
+        # Add timeout
+        if timeout:
+            cmd += ["-timeout", str(timeout)]
+        
+        # Add include unresolvable
+        if include_unresolvable:
+            cmd += ["-include-unresolvable"]
+        
+        # Add output file
+        if output_file:
+            cmd += ["-o", output_file]
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
+    if tool == "enscan":
+        keyword = data.get("keyword", "")
+        company_id = data.get("company_id", "")
+        input_file = data.get("input_file", "")
+        is_pid = data.get("is_pid", "")
+        scan_type = data.get("scan_type", "aqc")
+        field = data.get("field", "")
+        invest = data.get("invest", "")
+        deep = data.get("deep", "0")
+        hold = data.get("hold", "")
+        supplier = data.get("supplier", "")
+        branch = data.get("branch", "")
+        is_branch = data.get("is_branch", "")
+        branch_filter = data.get("branch_filter", "")
+        out_dir = data.get("out_dir", "outs")
+        out_type = data.get("out_type", "xlsx")
+        json = data.get("json", "")
+        no_merge = data.get("no_merge", "")
+        is_show = data.get("is_show", "")
+        delay = data.get("delay", "0")
+        proxy = data.get("proxy", "")
+        timeout = data.get("timeout", "1")
+        debug = data.get("debug", "")
+        
+        cmd = ["ENScan_GO"]
+        
+        # Add keyword
+        if keyword:
+            cmd += ["-n", keyword]
+        
+        # Add company ID
+        if company_id:
+            cmd += ["-i", company_id]
+        
+        # Add input file
+        if input_file:
+            cmd += ["-f", input_file]
+        
+        # Add is_pid flag
+        if is_pid:
+            cmd += ["-is-pid"]
+        
+        # Add scan type
+        if scan_type:
+            cmd += ["-type", scan_type]
+        
+        # Add field
+        if field:
+            cmd += ["-field", field]
+        
+        # Add invest
+        if invest:
+            cmd += ["-invest", invest]
+        
+        # Add deep
+        if deep and deep != "0":
+            cmd += ["-deep", deep]
+        
+        # Add hold flag
+        if hold:
+            cmd += ["-hold"]
+        
+        # Add supplier flag
+        if supplier:
+            cmd += ["-supplier"]
+        
+        # Add branch flag
+        if branch:
+            cmd += ["-branch"]
+        
+        # Add is_branch flag
+        if is_branch:
+            cmd += ["-is-branch"]
+        
+        # Add branch filter
+        if branch_filter:
+            cmd += ["-branch-filter", branch_filter]
+        
+        # Add output directory
+        if out_dir:
+            cmd += ["-out-dir", out_dir]
+        
+        # Add output type
+        if out_type:
+            cmd += ["-out-type", out_type]
+        
+        # Add JSON format
+        if json:
+            cmd += ["-json"]
+        
+        # Add no_merge flag
+        if no_merge:
+            cmd += ["-no-merge"]
+        
+        # Add is_show flag
+        if is_show:
+            cmd += ["-is-show"]
+        
+        # Add delay
+        if delay and delay != "0":
+            cmd += ["-delay", delay]
+        
+        # Add proxy
+        if proxy:
+            cmd += ["-proxy", proxy]
+        
+        # Add timeout
+        if timeout and timeout != "1":
+            cmd += ["-timeout", timeout]
+        
+        # Add debug flag
+        if debug:
+            cmd += ["-debug"]
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
+    if tool == "searchsploit":
+        term = data.get("term", "")
+        title = data.get("title", "")
+        path = data.get("path", "")
+        platform_param = data.get("platform", "")
+        type = data.get("type", "")
+        author = data.get("author", "")
+        cve = data.get("cve", "")
+        date = data.get("date", "")
+        description = data.get("description", "")
+        nmap = data.get("nmap", "")
+        vulns = data.get("vulns", "")
+        cbb = data.get("cbb", "")
+        osh = data.get("osh", "")
+        st = data.get("st", "")
+        www = data.get("www", "")
+        pb = data.get("pb", "")
+        pi = data.get("pi", "")
+        rfi = data.get("rfi", "")
+        lfi = data.get("lfi", "")
+        sqli = data.get("sqli", "")
+        xss = data.get("xss", "")
+        shell = data.get("shell", "")
+        android = data.get("android", "")
+        dos = data.get("dos", "")
+        local = data.get("local", "")
+        remote = data.get("remote", "")
+        web = data.get("web", "")
+        wifi = data.get("wifi", "")
+        windows = data.get("windows", "")
+        exclude = data.get("exclude", "")
+        case_sensitive = data.get("case_sensitive", "")
+        count = data.get("count", "")
+        id = data.get("id", "")
+        mirror = data.get("mirror", "")
+        nmap_file = data.get("nmap_file", "")
+        searchsploit_path = data.get("searchsploit_path", "")
+        update = data.get("update", "")
+        colour = data.get("colour", "")
+        disable_color = data.get("disable_color", "")
+        json_output = data.get("json_output", "")
+        edb_id = data.get("edb_id", "")
+        github = data.get("github", "")
+        exploitdb_path = data.get("exploitdb_path", "")
+        
+        # 根据平台选择正确的命令
+        if platform.system() == "Windows":
+            cmd = ["searchsploit.cmd"]
+        else:
+            cmd = ["searchsploit"]
+        
+        # Add term
+        if term:
+            cmd.append(term)
+        
+        # Add title
+        if title:
+            cmd.extend(["-t", title])
+        
+        # Add path
+        if path:
+            cmd.extend(["-p", path])
+        
+        # Add platform
+        if platform_param:
+            cmd.extend(["--platform", platform_param])
+        
+        # Add type
+        if type:
+            cmd.extend(["--type", type])
+        
+        # Add author
+        if author:
+            cmd.extend(["--author", author])
+        
+        # Add CVE
+        if cve:
+            cmd.extend(["--cve", cve])
+        
+        # Add date
+        if date:
+            cmd.extend(["--date", date])
+        
+        # Add description
+        if description:
+            cmd.extend(["--description", description])
+        
+        # Add nmap
+        if nmap:
+            cmd.append("--nmap")
+        
+        # Add vulns
+        if vulns:
+            cmd.append("--vulns")
+        
+        # Add cbb
+        if cbb:
+            cmd.append("--cbb")
+        
+        # Add osh
+        if osh:
+            cmd.append("--osh")
+        
+        # Add st
+        if st:
+            cmd.append("--st")
+        
+        # Add www
+        if www:
+            cmd.append("--www")
+        
+        # Add pb
+        if pb:
+            cmd.append("--pb")
+        
+        # Add pi
+        if pi:
+            cmd.append("--pi")
+        
+        # Add rfi
+        if rfi:
+            cmd.append("--rfi")
+        
+        # Add lfi
+        if lfi:
+            cmd.append("--lfi")
+        
+        # Add sqli
+        if sqli:
+            cmd.append("--sqli")
+        
+        # Add xss
+        if xss:
+            cmd.append("--xss")
+        
+        # Add shell
+        if shell:
+            cmd.append("--shell")
+        
+        # Add android
+        if android:
+            cmd.append("--android")
+        
+        # Add dos
+        if dos:
+            cmd.append("--dos")
+        
+        # Add local
+        if local:
+            cmd.append("--local")
+        
+        # Add remote
+        if remote:
+            cmd.append("--remote")
+        
+        # Add web
+        if web:
+            cmd.append("--web")
+        
+        # Add wifi
+        if wifi:
+            cmd.append("--wifi")
+        
+        # Add windows
+        if windows:
+            cmd.append("--windows")
+        
+        # Add exclude
+        if exclude:
+            cmd.extend(["--exclude", exclude])
+        
+        # Add case_sensitive
+        if case_sensitive:
+            cmd.append("--case-sensitive")
+        
+        # Add count
+        if count:
+            cmd.append("--count")
+        
+        # Add id
+        if id:
+            cmd.extend(["-id", id])
+        
+        # Add mirror
+        if mirror:
+            cmd.append("--mirror")
+        
+        # Add nmap_file
+        if nmap_file:
+            cmd.extend(["-nmap", nmap_file])
+        
+        # Add searchsploit_path
+        if searchsploit_path:
+            cmd.extend(["--searchsploit-path", searchsploit_path])
+        
+        # Add update
+        if update:
+            cmd.append("--update")
+        
+        # Add colour
+        if colour:
+            cmd.extend(["--colour", colour])
+        
+        # Add disable_color
+        if disable_color:
+            cmd.append("--disable-colour")
+        
+        # Add json_output
+        if json_output:
+            cmd.append("--json")
+        
+        # Add edb_id
+        if edb_id:
+            cmd.extend(["--edb-id", edb_id])
+        
+        # Add github
+        if github:
+            cmd.extend(["--github", github])
+        
+        # Add exploitdb_path
+        if exploitdb_path:
+            cmd.extend(["--exploitdb-path", exploitdb_path])
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
+    if tool == "githacker":
+        url = data.get("url", "")
+        output = data.get("output", "")
+        threads = data.get("threads", "")
+        brute = data.get("brute", False)
+        url_file = data.get("url_file", "")
+        
+        cmd = ["githacker"]
+        
+        # 添加URL
+        if url:
+            cmd += ["--url", url]
+        
+        # 添加输出目录
+        if output:
+            cmd += ["--output-folder", output]
+        
+        # 添加线程数
+        if threads:
+            cmd += ["--threads", str(threads)]
+        
+        # 添加暴力破解标志
+        if brute:
+            cmd += ["--brute"]
+        
+        # 添加URL文件
+        if url_file:
+            cmd += ["--url-file", url_file]
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
+    if tool == "gowitness":
+        scan_type = data.get("scan_type", "single")
+        url = data.get("url", "")
+        file = data.get("file", "")
+        cidr = data.get("cidr", "")
+        nmap_file = data.get("nmap_file", "")
+        nessus_file = data.get("nessus_file", "")
+        threads = data.get("threads", "")
+        timeout = data.get("timeout", "")
+        delay = data.get("delay", "")
+        screenshot_path = data.get("screenshot_path", "")
+        screenshot_format = data.get("screenshot_format", "")
+        chrome_path = data.get("chrome_path", "")
+        chrome_proxy = data.get("chrome_proxy", "")
+        chrome_user_agent = data.get("chrome_user_agent", "")
+        write_db = data.get("write_db", False)
+        write_csv = data.get("write_csv", False)
+        write_jsonl = data.get("write_jsonl", False)
+        screenshot_fullpage = data.get("screenshot_fullpage", False)
+        save_content = data.get("save_content", False)
+        
+        # 基础命令
+        cmd = ["gowitness", "scan", scan_type]
+        
+        # 根据扫描类型添加参数
+        if scan_type == "single" and url:
+            cmd += ["-u", url]
+        elif scan_type == "file" and file:
+            cmd += ["-f", file]
+        elif scan_type == "cidr" and cidr:
+            cmd += ["-c", cidr]
+        elif scan_type == "nmap" and nmap_file:
+            cmd += ["-f", nmap_file]
+        elif scan_type == "nessus" and nessus_file:
+            cmd += ["-f", nessus_file]
+        
+        # 添加线程数
+        if threads:
+            cmd += ["-t", str(threads)]
+        
+        # 添加超时时间
+        if timeout:
+            cmd += ["-T", str(timeout)]
+        
+        # 添加延迟
+        if delay:
+            cmd += ["--delay", str(delay)]
+        
+        # 添加截图保存路径
+        if screenshot_path:
+            cmd += ["-s", screenshot_path]
+        
+        # 添加截图格式
+        if screenshot_format:
+            cmd += ["--screenshot-format", screenshot_format]
+        
+        # 添加Chrome路径
+        if chrome_path:
+            cmd += ["--chrome-path", chrome_path]
+        
+        # 添加Chrome代理
+        if chrome_proxy:
+            cmd += ["--chrome-proxy", chrome_proxy]
+        
+        # 添加Chrome用户代理
+        if chrome_user_agent:
+            cmd += ["--chrome-user-agent", chrome_user_agent]
+        
+        # 添加写入数据库标志
+        if write_db:
+            cmd += ["--write-db"]
+        
+        # 添加写入CSV标志
+        if write_csv:
+            cmd += ["--write-csv"]
+        
+        # 添加写入JSONL标志
+        if write_jsonl:
+            cmd += ["--write-jsonl"]
+        
+        # 添加全页截图标志
+        if screenshot_fullpage:
+            cmd += ["--screenshot-fullpage"]
+        
+        # 添加保存内容标志
+        if save_content:
+            cmd += ["--save-content"]
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
     raise ValueError(f"Unsupported tool: {tool}")
 
 def shutil_which(name: str) -> Optional[str]:
@@ -453,6 +1276,9 @@ ALIAS_BINARIES = {
     "metasploit": ["msfconsole"],
     "netcat": ["ncat", "nc"],
     "ehole": ["EHole", "ehole"],
+    "searchsploit": ["searchsploit.cmd", "searchsploit"],
+    "githacker": ["githacker"],
+    "gowitness": ["gowitness"],
 }
 
 def tools_status_map(names: List[str]) -> Dict[str, bool]:
@@ -485,6 +1311,248 @@ def validate_tool_params(tool: str, data: Dict[str, Any]) -> Optional[str]:
         # BBOT requires at least one of target, preset, modules, or flags
         if not any([target, preset, modules, flags]):
             return "bbot 需要提供 'target', 'preset', 'modules', 或 'flags' 之一"
+    
+    if tool == "amass":
+        target = str(data.get("target", "")).strip()
+        mode = str(data.get("mode", "enum")).strip()
+        output_file = str(data.get("output_file", "")).strip()
+        
+        # Amass requires at least a target
+        if not target:
+            return "amass 需要提供 'target' 参数"
+        
+        # Validate mode
+        valid_modes = ["enum", "track", "intel", "db"]
+        if mode and mode not in valid_modes:
+            return f"amass mode 必须是以下之一: {', '.join(valid_modes)}"
+        
+        # Check if output file directory exists if output_file is provided
+        if output_file:
+            output_dir = os.path.dirname(output_file)
+            if output_dir and not os.path.exists(output_dir):
+                return f"输出目录不存在: {output_dir}"
+    
+    if tool == "enscan":
+        keyword = str(data.get("keyword", "")).strip()
+        company_id = str(data.get("company_id", "")).strip()
+        input_file = str(data.get("input_file", "")).strip()
+        out_dir = str(data.get("out_dir", "")).strip()
+        scan_type = str(data.get("scan_type", "")).strip()
+        invest = str(data.get("invest", "")).strip()
+        deep = str(data.get("deep", "0")).strip()
+        branch_filter = str(data.get("branch_filter", "")).strip()
+        proxy = str(data.get("proxy", "")).strip()
+        
+        # ENScan requires at least one of keyword, company_id, or input_file
+        if not any([keyword, company_id, input_file]):
+            return "enscan 需要提供 'keyword', 'company_id', 或 'input_file' 之一"
+        
+        # Check if input file exists if provided
+        if input_file and not os.path.exists(input_file):
+            return f"输入文件不存在: {input_file}"
+        
+        # Check if output directory exists if provided
+        if out_dir and not os.path.exists(out_dir):
+            return f"输出目录不存在: {out_dir}"
+        
+        # Validate scan_type
+        valid_scan_types = ["aqc", "tyc", "kc", "all"]
+        if scan_type and scan_type not in valid_scan_types:
+            return f"scan_type 必须是以下之一: {', '.join(valid_scan_types)}"
+        
+        # Validate deep
+        if deep and not deep.isdigit():
+            return "deep 必须是数字"
+        
+        # Validate invest if provided
+        if invest:
+            try:
+                invest_value = float(invest)
+                if invest_value < 0 or invest_value > 100:
+                    return "invest 必须是0-100之间的数字"
+            except ValueError:
+                return "invest 必须是数字"
+    
+    if tool == "searchsploit":
+        term = str(data.get("term", "")).strip()
+        title = str(data.get("title", "")).strip()
+        path = str(data.get("path", "")).strip()
+        platform = str(data.get("platform", "")).strip()
+        type = str(data.get("type", "")).strip()
+        author = str(data.get("author", "")).strip()
+        cve = str(data.get("cve", "")).strip()
+        date = str(data.get("date", "")).strip()
+        description = str(data.get("description", "")).strip()
+        nmap_file = str(data.get("nmap_file", "")).strip()
+        searchsploit_path = str(data.get("searchsploit_path", "")).strip()
+        colour = str(data.get("colour", "")).strip()
+        id = str(data.get("id", "")).strip()
+        edb_id = str(data.get("edb_id", "")).strip()
+        github = str(data.get("github", "")).strip()
+        exploitdb_path = str(data.get("exploitdb_path", "")).strip()
+        exclude = str(data.get("exclude", "")).strip()
+        
+        # SearchSploit requires at least one of term, title, cve, or id
+        if not any([term, title, cve, id]):
+            return "searchsploit 需要提供 'term', 'title', 'cve', 或 'id' 之一"
+        
+        # Check if path exists if provided
+        if path and not os.path.exists(path):
+            return f"路径不存在: {path}"
+        
+        # Check if nmap_file exists if provided
+        if nmap_file and not os.path.exists(nmap_file):
+            return f"Nmap文件不存在: {nmap_file}"
+        
+        # Check if searchsploit_path exists if provided
+        if searchsploit_path and not os.path.exists(searchsploit_path):
+            return f"SearchSploit路径不存在: {searchsploit_path}"
+        
+        # Check if exploitdb_path exists if provided
+        if exploitdb_path and not os.path.exists(exploitdb_path):
+            return f"ExploitDB路径不存在: {exploitdb_path}"
+        
+        # Validate platform
+        valid_platforms = ["aix", "bsd", "bsd/x86", "bsd/x86-64", "cgi", "freebsd", "freebsd/x86", 
+                           "freebsd/x86-64", "hardware", "hp-ux", "irix", "linux", "linux/x86", 
+                           "linux/x86-64", "macos", "multiple", "netbsd", "netbsd/x86", 
+                           "netbsd/x86-64", "novell", "openbsd", "openbsd/x86", "openbsd/x86-64", 
+                           "osx", "sco", "solaris", "solaris/x86", "solaris/x86-64", "unix", 
+                           "windows", "windows/x86", "windows/x86-64"]
+        if platform and platform.lower() not in valid_platforms:
+            return f"platform 必须是以下之一: {', '.join(valid_platforms)}"
+        
+        # Validate type
+        valid_types = ["dos", "local", "remote", "shellcode", "webapps"]
+        if type and type.lower() not in valid_types:
+            return f"type 必须是以下之一: {', '.join(valid_types)}"
+        
+        # Validate colour
+        valid_colours = ["0", "1", "2", "3", "4", "5", "6", "7", "always", "never", "auto"]
+        if colour and colour.lower() not in valid_colours:
+            return f"colour 必须是以下之一: {', '.join(valid_colours)}"
+        
+        # Validate date format (YYYY-MM-DD)
+        if date:
+            try:
+                from datetime import datetime
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                return "date 必须是 YYYY-MM-DD 格式"
+    
+    if tool == "githacker":
+        url = str(data.get("url", "")).strip()
+        output = str(data.get("output", "")).strip()
+        threads = str(data.get("threads", "")).strip()
+        url_file = str(data.get("url_file", "")).strip()
+        
+        # GitHacker requires at least a URL or URL file
+        if not url and not url_file:
+            return "githacker 需要提供 'url' 或 'url_file' 之一"
+        
+        # Check if URL file exists if provided
+        if url_file and not os.path.exists(url_file):
+            return f"URL文件不存在: {url_file}"
+        
+        # Check if output directory exists if provided
+        if output and not os.path.exists(output):
+            return f"输出目录不存在: {output}"
+        
+        # Validate threads if provided
+        if threads:
+            try:
+                threads_value = int(threads)
+                if threads_value <= 0:
+                    return "threads 必须是正整数"
+            except ValueError:
+                return "threads 必须是数字"
+    
+    if tool == "gowitness":
+        scan_type = str(data.get("scan_type", "single")).strip()
+        url = str(data.get("url", "")).strip()
+        file = str(data.get("file", "")).strip()
+        cidr = str(data.get("cidr", "")).strip()
+        nmap_file = str(data.get("nmap_file", "")).strip()
+        nessus_file = str(data.get("nessus_file", "")).strip()
+        threads = str(data.get("threads", "")).strip()
+        timeout = str(data.get("timeout", "")).strip()
+        delay = str(data.get("delay", "")).strip()
+        screenshot_path = str(data.get("screenshot_path", "")).strip()
+        screenshot_format = str(data.get("screenshot_format", "")).strip()
+        chrome_path = str(data.get("chrome_path", "")).strip()
+        chrome_proxy = str(data.get("chrome_proxy", "")).strip()
+        chrome_user_agent = str(data.get("chrome_user_agent", "")).strip()
+        
+        # Validate scan_type
+        valid_scan_types = ["single", "file", "cidr", "nmap", "nessus"]
+        if scan_type and scan_type not in valid_scan_types:
+            return f"scan_type 必须是以下之一: {', '.join(valid_scan_types)}"
+        
+        # Validate required parameters based on scan_type
+        if scan_type == "single" and not url:
+            return "scan_type 为 'single' 时需要提供 'url' 参数"
+        elif scan_type == "file" and not file:
+            return "scan_type 为 'file' 时需要提供 'file' 参数"
+        elif scan_type == "cidr" and not cidr:
+            return "scan_type 为 'cidr' 时需要提供 'cidr' 参数"
+        elif scan_type == "nmap" and not nmap_file:
+            return "scan_type 为 'nmap' 时需要提供 'nmap_file' 参数"
+        elif scan_type == "nessus" and not nessus_file:
+            return "scan_type 为 'nessus' 时需要提供 'nessus_file' 参数"
+        
+        # Check if file exists if provided
+        if file and not os.path.exists(file):
+            return f"文件不存在: {file}"
+        
+        # Check if nmap_file exists if provided
+        if nmap_file and not os.path.exists(nmap_file):
+            return f"Nmap文件不存在: {nmap_file}"
+        
+        # Check if nessus_file exists if provided
+        if nessus_file and not os.path.exists(nessus_file):
+            return f"Nessus文件不存在: {nessus_file}"
+        
+        # Check if screenshot_path directory exists if provided
+        if screenshot_path:
+            screenshot_dir = os.path.dirname(screenshot_path)
+            if screenshot_dir and not os.path.exists(screenshot_dir):
+                return f"截图目录不存在: {screenshot_dir}"
+        
+        # Check if chrome_path exists if provided
+        if chrome_path and not os.path.exists(chrome_path):
+            return f"Chrome路径不存在: {chrome_path}"
+        
+        # Validate threads if provided
+        if threads:
+            try:
+                threads_value = int(threads)
+                if threads_value <= 0:
+                    return "threads 必须是正整数"
+            except ValueError:
+                return "threads 必须是数字"
+        
+        # Validate timeout if provided
+        if timeout:
+            try:
+                timeout_value = int(timeout)
+                if timeout_value <= 0:
+                    return "timeout 必须是正整数"
+            except ValueError:
+                return "timeout 必须是数字"
+        
+        # Validate delay if provided
+        if delay:
+            try:
+                delay_value = float(delay)
+                if delay_value < 0:
+                    return "delay 必须是非负数"
+            except ValueError:
+                return "delay 必须是数字"
+        
+        # Validate screenshot_format if provided
+        valid_formats = ["jpeg", "png"]
+        if screenshot_format and screenshot_format.lower() not in valid_formats:
+            return f"screenshot_format 必须是以下之一: {', '.join(valid_formats)}"
     
     return None
 
@@ -537,6 +1605,479 @@ def parse_tool_output(tool: str, stdout: str, stderr: str) -> Dict[str, Any]:
             "ports": sorted(ports),
             "vulnerabilities": vulnerabilities,
             "emails": emails
+        })
+    elif tool == "amass":
+        # Extract subdomains
+        subdomains = []
+        for m in re.finditer(r"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", stdout or "", re.MULTILINE):
+            subdomains.append(m.group(0))
+        
+        # Extract IP addresses
+        ips = []
+        for m in re.finditer(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", stdout or ""):
+            ips.append(m.group(0))
+        
+        # Extract URLs
+        urls = []
+        for m in re.finditer(r"https?://[^\s]+", stdout or ""):
+            urls.append(m.group(0))
+        
+        # Extract email addresses
+        emails = []
+        for m in re.finditer(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", stdout or ""):
+            emails.append(m.group(0))
+        
+        # Extract ASN information
+        asns = []
+        for m in re.finditer(r"ASN:\s*(\d+)", stdout or ""):
+            asns.append(m.group(1))
+        
+        # Extract certificate information
+        certificates = []
+        for m in re.finditer(r"Certificate:\s*([^\n]+)", stdout or ""):
+            certificates.append(m.group(1))
+        
+        parsed.update({
+            "subdomains": subdomains,
+            "ips": ips,
+            "urls": urls,
+            "emails": emails,
+            "asns": asns,
+            "certificates": certificates
+        })
+    elif tool == "enscan":
+        # Extract company names
+        companies = []
+        for m in re.finditer(r"公司名称[：:]\s*([^\n]+)", stdout or ""):
+            companies.append(m.group(1).strip())
+        
+        # Extract company IDs
+        company_ids = []
+        for m in re.finditer(r"公司ID[：:]\s*([^\n]+)", stdout or ""):
+            company_ids.append(m.group(1).strip())
+        
+        # Extract legal representatives
+        legal_reps = []
+        for m in re.finditer(r"法定代表人[：:]\s*([^\n]+)", stdout or ""):
+            legal_reps.append(m.group(1).strip())
+        
+        # Extract registration capital
+        capital = []
+        for m in re.finditer(r"注册资本[：:]\s*([^\n]+)", stdout or ""):
+            capital.append(m.group(1).strip())
+        
+        # Extract establishment dates
+        dates = []
+        for m in re.finditer(r"成立日期[：:]\s*([^\n]+)", stdout or ""):
+            dates.append(m.group(1).strip())
+        
+        # Extract business scopes
+        scopes = []
+        for m in re.finditer(r"经营范围[：:]\s*([^\n]+)", stdout or ""):
+            scopes.append(m.group(1).strip())
+        
+        # Extract addresses
+        addresses = []
+        for m in re.finditer(r"地址[：:]\s*([^\n]+)", stdout or ""):
+            addresses.append(m.group(1).strip())
+        
+        # Extract phone numbers
+        phones = []
+        for m in re.finditer(r"电话[：:]\s*([^\n]+)", stdout or ""):
+            phones.append(m.group(1).strip())
+        
+        # Extract emails
+        emails = []
+        for m in re.finditer(r"邮箱[：:]\s*([^\n]+)", stdout or ""):
+            emails.append(m.group(1).strip())
+        
+        # Extract websites
+        websites = []
+        for m in re.finditer(r"网站[：:]\s*([^\n]+)", stdout or ""):
+            websites.append(m.group(1).strip())
+        
+        # Extract unified social credit codes
+        credit_codes = []
+        for m in re.finditer(r"统一社会信用代码[：:]\s*([^\n]+)", stdout or ""):
+            credit_codes.append(m.group(1).strip())
+        
+        # Extract business status
+        business_status = []
+        for m in re.finditer(r"经营状态[：:]\s*([^\n]+)", stdout or ""):
+            business_status.append(m.group(1).strip())
+        
+        # Extract company types
+        company_types = []
+        for m in re.finditer(r"公司类型[：:]\s*([^\n]+)", stdout or ""):
+            company_types.append(m.group(1).strip())
+        
+        # Extract registration authorities
+        registration_authorities = []
+        for m in re.finditer(r"登记机关[：:]\s*([^\n]+)", stdout or ""):
+            registration_authorities.append(m.group(1).strip())
+        
+        # Extract ICP information
+        icp_sites = []
+        for m in re.finditer(r"网站名称[：:]\s*([^\n]+)", stdout or ""):
+            icp_sites.append(m.group(1).strip())
+        
+        icp_domains = []
+        for m in re.finditer(r"域名[：:]\s*([^\n]+)", stdout or ""):
+            icp_domains.append(m.group(1).strip())
+        
+        icp_licenses = []
+        for m in re.finditer(r"ICP备案号[：:]\s*([^\n]+)", stdout or ""):
+            icp_licenses.append(m.group(1).strip())
+        
+        # Extract app information
+        app_names = []
+        for m in re.finditer(r"应用名称[：:]\s*([^\n]+)", stdout or ""):
+            app_names.append(m.group(1).strip())
+        
+        app_categories = []
+        for m in re.finditer(r"应用分类[：:]\s*([^\n]+)", stdout or ""):
+            app_categories.append(m.group(1).strip())
+        
+        app_versions = []
+        for m in re.finditer(r"当前版本[：:]\s*([^\n]+)", stdout or ""):
+            app_versions.append(m.group(1).strip())
+        
+        # Extract Weibo information
+        weibo_names = []
+        for m in re.finditer(r"微博昵称[：:]\s*([^\n]+)", stdout or ""):
+            weibo_names.append(m.group(1).strip())
+        
+        weibo_links = []
+        for m in re.finditer(r"微博链接[：:]\s*([^\n]+)", stdout or ""):
+            weibo_links.append(m.group(1).strip())
+        
+        # Extract WeChat information
+        wechat_names = []
+        for m in re.finditer(r"公众号名称[：:]\s*([^\n]+)", stdout or ""):
+            wechat_names.append(m.group(1).strip())
+        
+        wechat_ids = []
+        for m in re.finditer(r"微信号[：:]\s*([^\n]+)", stdout or ""):
+            wechat_ids.append(m.group(1).strip())
+        
+        # Extract WeChat Mini Program information
+        wx_app_names = []
+        for m in re.finditer(r"小程序名称[：:]\s*([^\n]+)", stdout or ""):
+            wx_app_names.append(m.group(1).strip())
+        
+        wx_app_categories = []
+        for m in re.finditer(r"小程序分类[：:]\s*([^\n]+)", stdout or ""):
+            wx_app_categories.append(m.group(1).strip())
+        
+        # Extract copyright information
+        copyright_names = []
+        for m in re.finditer(r"软件名称[：:]\s*([^\n]+)", stdout or ""):
+            copyright_names.append(m.group(1).strip())
+        
+        copyright_numbers = []
+        for m in re.finditer(r"登记号[：:]\s*([^\n]+)", stdout or ""):
+            copyright_numbers.append(m.group(1).strip())
+        
+        # Extract investment information
+        investment_companies = []
+        for m in re.finditer(r"投资公司[：:]\s*([^\n]+)", stdout or ""):
+            investment_companies.append(m.group(1).strip())
+        
+        investment_ratios = []
+        for m in re.finditer(r"投资比例[：:]\s*([^\n]+)", stdout or ""):
+            investment_ratios.append(m.group(1).strip())
+        
+        # Extract subsidiary information
+        subsidiary_companies = []
+        for m in re.finditer(r"子公司[：:]\s*([^\n]+)", stdout or ""):
+            subsidiary_companies.append(m.group(1).strip())
+        
+        # Extract supplier information
+        supplier_companies = []
+        for m in re.finditer(r"供应商[：:]\s*([^\n]+)", stdout or ""):
+            supplier_companies.append(m.group(1).strip())
+        
+        parsed.update({
+            "companies": companies,
+            "company_ids": company_ids,
+            "legal_representatives": legal_reps,
+            "registration_capital": capital,
+            "establishment_dates": dates,
+            "business_scopes": scopes,
+            "addresses": addresses,
+            "phone_numbers": phones,
+            "emails": emails,
+            "websites": websites,
+            "unified_social_credit_codes": credit_codes,
+            "business_status": business_status,
+            "company_types": company_types,
+            "registration_authorities": registration_authorities,
+            # ICP information
+            "icp_sites": icp_sites,
+            "icp_domains": icp_domains,
+            "icp_licenses": icp_licenses,
+            # App information
+            "app_names": app_names,
+            "app_categories": app_categories,
+            "app_versions": app_versions,
+            # Weibo information
+            "weibo_names": weibo_names,
+            "weibo_links": weibo_links,
+            # WeChat information
+            "wechat_names": wechat_names,
+            "wechat_ids": wechat_ids,
+            # WeChat Mini Program information
+            "wx_app_names": wx_app_names,
+            "wx_app_categories": wx_app_categories,
+            # Copyright information
+            "copyright_names": copyright_names,
+            "copyright_numbers": copyright_numbers,
+            # Investment information
+            "investment_companies": investment_companies,
+            "investment_ratios": investment_ratios,
+            # Subsidiary information
+            "subsidiary_companies": subsidiary_companies,
+            # Supplier information
+            "supplier_companies": supplier_companies
+        })
+    elif tool == "searchsploit":
+        # Extract exploit IDs
+        exploit_ids = []
+        for m in re.finditer(r"(\d+)\s+\|\s+", stdout or ""):
+            exploit_ids.append(m.group(1))
+        
+        # Extract titles
+        titles = []
+        for m in re.finditer(r"\|\s+([^\|]+)\s+\|\s+", stdout or ""):
+            title = m.group(1).strip()
+            if title and title not in titles:
+                titles.append(title)
+        
+        # Extract paths
+        paths = []
+        for m in re.finditer(r"\|\s+([^\|]+)\s*$", stdout or "", re.MULTILINE):
+            path = m.group(1).strip()
+            if path and path not in paths:
+                paths.append(path)
+        
+        # Extract CVE numbers
+        cves = []
+        for m in re.finditer(r"CVE[-_]?\d{4}[-_]?\d{4,}", stdout or "", re.IGNORECASE):
+            cve = m.group(0).upper()
+            if cve not in cves:
+                cves.append(cve)
+        
+        # Extract platforms
+        platforms = []
+        for m in re.finditer(r"\|\s+(linux|windows|bsd|solaris|macos|aix|hp-ux|irix|netbsd|openbsd|freebsd|sco|novell|unix|multiple|hardware|cgi|webapps)\s+\|", stdout or "", re.IGNORECASE):
+            platform = m.group(1).lower()
+            if platform not in platforms:
+                platforms.append(platform)
+        
+        # Extract types
+        types = []
+        for m in re.finditer(r"\|\s+(dos|local|remote|shellcode|webapps)\s+\|", stdout or "", re.IGNORECASE):
+            type = m.group(1).lower()
+            if type not in types:
+                types.append(type)
+        
+        # Extract dates
+        dates = []
+        for m in re.finditer(r"\|\s+(\d{4}-\d{2}-\d{2})\s+\|", stdout or ""):
+            date = m.group(1)
+            if date not in dates:
+                dates.append(date)
+        
+        # Extract authors
+        authors = []
+        for m in re.finditer(r"\|\s+([^\|]+)\s+\|\s+\d{4}-\d{2}-\d{2}", stdout or ""):
+            author = m.group(1).strip()
+            if author and author not in authors:
+                authors.append(author)
+        
+        # Extract verified exploits
+        verified = []
+        for m in re.finditer(r"\|\s+(verified)\s+\|", stdout or "", re.IGNORECASE):
+            verified.append(m.group(1).lower())
+        
+        # Extract application names
+        applications = []
+        for line in lines:
+            for word in re.findall(r"\b([A-Za-z][A-Za-z0-9_\-\.]{2,})\b", line):
+                if len(word) > 3 and word.lower() not in ["linux", "windows", "exploit", "shell", "code", "remote", "local", "dos", "web", "app", "server", "client", "service", "daemon", "version", "vulnerability"]:
+                    if word not in applications:
+                        applications.append(word)
+        
+        # Extract URLs
+        urls = []
+        for m in re.finditer(r"https?://[^\s]+", stdout or ""):
+            urls.append(m.group(0))
+        
+        # Extract file paths
+        file_paths = []
+        for m in re.finditer(r"([/\\][a-zA-Z0-9_\-/\\\.]+\.(?:txt|py|pl|rb|c|cpp|sh|php|html|js|asp|jsp))", stdout or ""):
+            file_path = m.group(1)
+            if file_path not in file_paths:
+                file_paths.append(file_path)
+        
+        # Extract CVE matches in descriptions
+        cve_matches = []
+        for line in lines:
+            if re.search(r"CVE[-_]?\d{4}[-_]?\d{4,}", line, re.IGNORECASE):
+                cve_matches.append(line.strip())
+        
+        # Extract exploit titles with keywords
+        exploit_titles = []
+        for line in lines:
+            if re.search(r"\|\s+([^\|]+)\s+\|", line):
+                title_match = re.search(r"\|\s+([^\|]+)\s+\|", line)
+                if title_match:
+                    title = title_match.group(1).strip()
+                    if title and title not in exploit_titles:
+                        exploit_titles.append(title)
+        
+        # Extract full exploit entries
+        exploit_entries = []
+        for line in lines:
+            if re.search(r"\|\s+\d+\s+\|", line):
+                exploit_entries.append(line.strip())
+        
+        parsed.update({
+            "exploit_ids": exploit_ids,
+            "titles": titles,
+            "paths": paths,
+            "cves": cves,
+            "platforms": platforms,
+            "types": types,
+            "dates": dates,
+            "authors": authors,
+            "verified": verified,
+            "applications": applications[:20],  # Limit to first 20 to avoid noise
+            "urls": urls,
+            "file_paths": file_paths,
+            "cve_matches": cve_matches,
+            "exploit_titles": exploit_titles,
+            "exploit_entries": exploit_entries
+        })
+    elif tool == "githacker":
+        # Extract URLs
+        urls = []
+        for m in re.finditer(r"https?://[^\s]+", stdout or ""):
+            urls.append(m.group(0))
+        
+        # Extract file paths
+        file_paths = []
+        for m in re.finditer(r"([/\\][a-zA-Z0-9_\-/\\\.]+\.[a-zA-Z0-9_\-]+)", stdout or ""):
+            file_path = m.group(1)
+            if file_path not in file_paths:
+                file_paths.append(file_path)
+        
+        # Extract repository information
+        repo_info = []
+        for line in lines:
+            if re.search(r"(?i)(repository|repo|git|clone|pull|commit|branch|tag)", line):
+                repo_info.append(line.strip())
+        
+        # Extract extracted files information
+        extracted_files = []
+        for line in lines:
+            if re.search(r"(?i)(extract|restore|recover|download|save|write)", line):
+                extracted_files.append(line.strip())
+        
+        # Extract error messages
+        errors = []
+        for line in lines:
+            if re.search(r"(?i)(error|fail|exception|denied|not found|invalid)", line):
+                errors.append(line.strip())
+        
+        # Extract success messages
+        success = []
+        for line in lines:
+            if re.search(r"(?i)(success|complete|done|finished|extracted|restored)", line):
+                success.append(line.strip())
+        
+        # Extract directory information
+        directories = []
+        for m in re.finditer(r"([a-zA-Z]:[\\/][^\s]+)", stdout or ""):
+            directories.append(m.group(1))
+        
+        # Extract commit hashes
+        commits = []
+        for m in re.finditer(r"\b([0-9a-f]{7,40})\b", stdout or ""):
+            commits.append(m.group(1))
+        
+        parsed.update({
+            "urls": urls,
+            "file_paths": file_paths,
+            "repo_info": repo_info,
+            "extracted_files": extracted_files,
+            "errors": errors,
+            "success": success,
+            "directories": directories,
+            "commits": commits
+        })
+    elif tool == "gowitness":
+        # Extract URLs
+        urls = []
+        for m in re.finditer(r"https?://[^\s]+", stdout or ""):
+            urls.append(m.group(0))
+        
+        # Extract screenshot file paths
+        screenshots = []
+        for m in re.finditer(r"([a-zA-Z]:[\\/][^\s]*\.(?:png|jpg|jpeg))", stdout or ""):
+            screenshots.append(m.group(1))
+        
+        # Extract status codes
+        status_codes = []
+        for m in re.finditer(r"(?:status|code|response):\s*(\d{3})", stdout or "", re.IGNORECASE):
+            status_code = int(m.group(1))
+            if status_code not in status_codes:
+                status_codes.append(status_code)
+        
+        # Extract page titles
+        titles = []
+        for m in re.finditer(r"(?:title|page):\s*([^\n\r]+)", stdout or "", re.IGNORECASE):
+            titles.append(m.group(1).strip())
+        
+        # Extract error messages
+        errors = []
+        for line in lines:
+            if re.search(r"(?i)(error|fail|exception|denied|not found|invalid|timeout)", line):
+                errors.append(line.strip())
+        
+        # Extract success messages
+        success = []
+        for line in lines:
+            if re.search(r"(?i)(success|complete|done|finished|captured|saved)", line):
+                success.append(line.strip())
+        
+        # Extract timing information
+        timing = []
+        for m in re.finditer(r"(?:time|duration|elapsed):\s*([0-9.]+)\s*(?:s|sec|seconds|ms|milliseconds)", stdout or "", re.IGNORECASE):
+            timing.append(m.group(1))
+        
+        # Extract browser information
+        browser_info = []
+        for line in lines:
+            if re.search(r"(?i)(chrome|browser|webdriver|headless)", line):
+                browser_info.append(line.strip())
+        
+        # Extract scan statistics
+        stats = []
+        for line in lines:
+            if re.search(r"(?i)(total|count|scanned|processed|completed|failed|success)", line):
+                stats.append(line.strip())
+        
+        parsed.update({
+            "urls": urls,
+            "screenshots": screenshots,
+            "status_codes": status_codes,
+            "titles": titles,
+            "errors": errors,
+            "success": success,
+            "timing": timing,
+            "browser_info": browser_info,
+            "stats": stats
         })
     return parsed
 
