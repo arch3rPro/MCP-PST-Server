@@ -104,11 +104,125 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
             
         # 添加脚本扫描
         if script_scan:
-            cmd += ["--script", script_scan]
+            # 处理常见的NSE脚本问题
+            # 如果是"default"，替换为更具体的脚本类别，避免NSE引擎初始化失败
+            if script_scan == "default":
+                script_scan = "auth,banner,brute,default,discovery,external,intrusive,malware,safe,vuln"
+            
+            # 验证脚本名称格式，处理逗号分隔的多个脚本
+            scripts = [s.strip() for s in script_scan.split(',')]
+            valid_scripts = []
+            
+            for script in scripts:
+                # 跳过空脚本名
+                if not script:
+                    continue
+                
+                # 移除.nse扩展名（如果存在）
+                if script.endswith('.nse'):
+                    script = script[:-4]
+                
+                # 如果脚本包含路径分隔符，可能是完整路径，直接使用
+                if '/' in script or '\\' in script:
+                    if os.path.exists(script):
+                        valid_scripts.append(script)
+                    continue
+                
+                # 检查常见脚本名称
+                common_scripts = [
+                    "ssh2-enum-algos", "ssh-hostkey", "ssh-auth-methods", "ssh-run",
+                    "http-enum", "http-title", "http-headers", "http-methods", "http-ntlm-info",
+                    "smb-enum-shares", "smb-enum-users", "smb-os-discovery",
+                    "ftp-anon", "ftp-bounce", "ftp-libopie", "ftp-proftpd-backdoor",
+                    "mysql-info", "mysql-enum", "mysql-vulns",
+                    "postgresql-brute", "postgresql-info",
+                    "redis-info", "mongodb-info", "elasticsearch-info",
+                    "ssl-enum-ciphers", "ssl-cert", "ssl-heartbleed",
+                    "dns-brute", "dns-zone-transfer", "dns-nsec-enum",
+                    "snmp-brute", "snmp-info", "snmp-interfaces"
+                ]
+                
+                # 如果是常见脚本，直接添加
+                if script in common_scripts:
+                    valid_scripts.append(script)
+                # 如果是脚本类别，直接添加
+                elif script in ["auth", "banner", "brute", "default", "discovery", "external", "intrusive", "malware", "safe", "vuln"]:
+                    valid_scripts.append(script)
+                # 否则，尝试检查脚本文件是否存在
+                else:
+                    # 尝试常见路径
+                    script_paths = [
+                        f"/usr/share/nmap/scripts/{script}.nse",
+                        f"/usr/local/share/nmap/scripts/{script}.nse",
+                        f"C:\\Program Files\\Nmap\\scripts\\{script}.nse",
+                        f"{script}.nse"  # 相对路径
+                    ]
+                    
+                    script_found = False
+                    for path in script_paths:
+                        if os.path.exists(path):
+                            valid_scripts.append(script)
+                            script_found = True
+                            break
+                    
+                    # 如果脚本未找到，仍然添加到列表中，让nmap自己处理错误
+                    if not script_found:
+                        valid_scripts.append(script)
+            
+            # 只有在有有效脚本时才添加--script参数
+            if valid_scripts:
+                cmd += ["--script", ",".join(valid_scripts)]
             
         # 添加脚本参数
         if script_args:
-            cmd += ["--script-args", script_args]
+            # 处理常见的NSE脚本参数问题
+            # 确保参数格式正确，避免解析失败
+            # 脚本参数应该是 key=value;key2=value2 的格式
+            
+            # 移除可能存在的前缀 --script-args=
+            if script_args.startswith("--script-args="):
+                script_args = script_args[len("--script-args="):]
+            elif script_args.startswith("--script-args "):
+                script_args = script_args[len("--script-args "):]
+            
+            # 检查参数格式，如果没有等号，可能是格式错误
+            if '=' not in script_args and ';' not in script_args:
+                # 尝试修复常见格式问题
+                # 如果只是一个值，可能需要添加键名
+                if script_args and not any(c in script_args for c in ['=', ';', ',']):
+                    # 对于简单值，添加默认键名
+                    script_args = f"args={script_args}"
+            
+            # 进一步验证和清理参数
+            args_list = []
+            for arg in script_args.split(';'):
+                arg = arg.strip()
+                if not arg:
+                    continue
+                
+                # 确保每个参数都有键值对
+                if '=' in arg:
+                    key, value = arg.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    
+                    # 清理键名中的特殊字符
+                    key = ''.join(c for c in key if c.isalnum() or c in ['_', '-'])
+                    
+                    # 清理值中的特殊字符
+                    if value:
+                        # 如果值包含空格，添加引号
+                        if ' ' in value and not (value.startswith('"') and value.endswith('"')):
+                            value = f'"{value}"'
+                        
+                        args_list.append(f"{key}={value}")
+                else:
+                    # 对于没有等号的参数，尝试添加默认键名
+                    args_list.append(f"arg={arg}")
+            
+            # 只有在有有效参数时才添加--script-args参数
+            if args_list:
+                cmd += ["--script-args", ";".join(args_list)]
             
         # 添加端口范围
         if ports:
@@ -116,9 +230,24 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
             
         # 添加输出格式和文件
         if output_format and output_file:
-            cmd += [f"{output_format}", output_file]
+            # 直接使用用户指定的输出格式
+            if output_format.startswith("-o"):
+                cmd += [output_format, output_file]
+            else:
+                # 如果不是标准的输出格式选项，假设是格式类型
+                # 使用XML作为默认格式
+                cmd += ["-oX", output_file]
         elif output_format:
-            cmd += [output_format]
+            # 处理只有输出格式没有文件的情况
+            if output_format.startswith("-o"):
+                cmd += [output_format]
+            else:
+                # 对于非标准格式，使用XML
+                import tempfile
+                temp_file = tempfile.NamedTemporaryFile(suffix=".xml", delete=False)
+                output_file = temp_file.name
+                temp_file.close()
+                cmd += ["-oX", output_file]
             
         # 添加发包速率限制
         if min_rate:
@@ -393,6 +522,17 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         username_file = data.get("username_file", "")
         password = data.get("password", "")
         password_file = data.get("password_file", "")
+        port = data.get("port", "")
+        tasks = data.get("tasks", "")
+        wait_time = data.get("wait_time", "")
+        timeout = data.get("timeout", "")
+        login_attempts = data.get("login_attempts", "")
+        retry_time = data.get("retry_time", "")
+        exit_on_success = data.get("exit_on_success", "")
+        skip_default_passwords = data.get("skip_default_passwords", "")
+        skip_empty_passwords = data.get("skip_empty_passwords", "")
+        skip_login = data.get("skip_login", "")
+        use_ssl = data.get("use_ssl", "")
         
         cmd = ["hydra"]
         
@@ -407,6 +547,50 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
             cmd += ["-P", password_file]
         elif password:
             cmd += ["-p", password]
+        
+        # Add port if specified
+        if port:
+            cmd += ["-s", port]
+        
+        # Add tasks/threads if specified
+        if tasks:
+            cmd += ["-t", tasks]
+        
+        # Add wait time if specified
+        if wait_time:
+            cmd += ["-w", wait_time]
+        
+        # Add timeout if specified
+        if timeout:
+            cmd += ["-w", timeout]
+        
+        # Add login attempts if specified
+        if login_attempts:
+            cmd += ["-m", login_attempts]
+        
+        # Add retry time if specified
+        if retry_time:
+            cmd += ["-w", retry_time]
+        
+        # Add exit on success flag
+        if exit_on_success:
+            cmd += ["-f"]
+        
+        # Add skip default passwords flag
+        if skip_default_passwords:
+            cmd += ["-e", "nsr"]
+        
+        # Add skip empty passwords flag
+        if skip_empty_passwords:
+            cmd += ["-e", "n"]
+        
+        # Add skip login flag
+        if skip_login:
+            cmd += ["-e", "s"]
+        
+        # Add SSL flag
+        if use_ssl:
+            cmd += ["-S"]
         
         # Add target and service
         if target and service:
@@ -1554,13 +1738,182 @@ def validate_tool_params(tool: str, data: Dict[str, Any]) -> Optional[str]:
         if screenshot_format and screenshot_format.lower() not in valid_formats:
             return f"screenshot_format 必须是以下之一: {', '.join(valid_formats)}"
     
+    if tool == "hydra":
+        target = str(data.get("target", "")).strip()
+        service = str(data.get("service", "")).strip()
+        username = str(data.get("username", "")).strip()
+        username_file = str(data.get("username_file", "")).strip()
+        password = str(data.get("password", "")).strip()
+        password_file = str(data.get("password_file", "")).strip()
+        port = str(data.get("port", "")).strip()
+        tasks = str(data.get("tasks", "")).strip()
+        wait_time = str(data.get("wait_time", "")).strip()
+        timeout = str(data.get("timeout", "")).strip()
+        login_attempts = str(data.get("login_attempts", "")).strip()
+        retry_time = str(data.get("retry_time", "")).strip()
+        
+        # Hydra requires at least target and service
+        if not target:
+            return "hydra 需要提供 'target' 参数"
+        if not service:
+            return "hydra 需要提供 'service' 参数"
+        
+        # Validate service
+        valid_services = [
+            "adam6500", "asterisk", "cisco", "cisco-enable", "cvs", "firebird", "ftp",
+            "ftps", "http-head", "http-get", "http-post", "http-get-form", "http-post-form",
+            "http-proxy", "http-proxy-urlenum", "icq", "imap", "imap3", "imaps", "irc",
+            "ldap2", "ldap3", "ldap2-crammd5", "ldap3-crammd5", "ldap2-digestmd5",
+            "ldap3-digestmd5", "mssql", "mysql", "nntp", "oracle-listener", "oracle-sid",
+            "pcanywhere", "pcnfs", "pop3", "pop3s", "postgres", "radmin", "rdp", "redis",
+            "rexec", "rlogin", "rpcap", "rsh", "rtsp", "s7-300", "s7-400", "s7-1200",
+            "s7-1500", "sip", "smb", "smb2", "smtp", "smtps", "smtp-enum", "snmp",
+            "socks5", "ssh", "sshkey", "svn", "teamspeak", "telnet", "tftp", "vmauthd",
+            "vnc", "xmpp"
+        ]
+        if service.lower() not in valid_services:
+            return f"service 必须是以下之一: {', '.join(valid_services[:10])}... (共{len(valid_services)}种服务)"
+        
+        # Check if username or username file is provided
+        if not username and not username_file:
+            return "hydra 需要提供 'username' 或 'username_file' 之一"
+        
+        # Check if password or password file is provided
+        if not password and not password_file:
+            return "hydra 需要提供 'password' 或 'password_file' 之一"
+        
+        # Check if username file exists if provided
+        if username_file and not os.path.exists(username_file):
+            return f"用户名文件不存在: {username_file}"
+        
+        # Check if password file exists if provided
+        if password_file and not os.path.exists(password_file):
+            return f"密码文件不存在: {password_file}"
+        
+        # Validate port if provided
+        if port:
+            try:
+                port_value = int(port)
+                if port_value < 1 or port_value > 65535:
+                    return "port 必须是1-65535之间的整数"
+            except ValueError:
+                return "port 必须是数字"
+        
+        # Validate tasks if provided
+        if tasks:
+            try:
+                tasks_value = int(tasks)
+                if tasks_value < 1 or tasks_value > 256:
+                    return "tasks 必须是1-256之间的整数"
+            except ValueError:
+                return "tasks 必须是数字"
+        
+        # Validate wait_time if provided
+        if wait_time:
+            try:
+                wait_time_value = float(wait_time)
+                if wait_time_value < 0:
+                    return "wait_time 必须是非负数"
+            except ValueError:
+                return "wait_time 必须是数字"
+        
+        # Validate timeout if provided
+        if timeout:
+            try:
+                timeout_value = int(timeout)
+                if timeout_value < 1:
+                    return "timeout 必须是正整数"
+            except ValueError:
+                return "timeout 必须是数字"
+        
+        # Validate login_attempts if provided
+        if login_attempts:
+            try:
+                login_attempts_value = int(login_attempts)
+                if login_attempts_value < 1:
+                    return "login_attempts 必须是正整数"
+            except ValueError:
+                return "login_attempts 必须是数字"
+        
+        # Validate retry_time if provided
+        if retry_time:
+            try:
+                retry_time_value = int(retry_time)
+                if retry_time_value < 1:
+                    return "retry_time 必须是正整数"
+            except ValueError:
+                return "retry_time 必须是数字"
+    
     return None
 
-def parse_tool_output(tool: str, stdout: str, stderr: str) -> Dict[str, Any]:
+def parse_tool_output(tool: str, stdout: str, stderr: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
     # Lightweight output parsing to aid readability; designed to be resilient
     lines = (stdout or "").splitlines()
     parsed: Dict[str, Any] = {"lines": lines}
-    if tool == "ehole":
+    
+    # 处理nmap工具的输出
+    if tool == "nmap":
+        # 从标准输出中提取基本信息
+        # 提取主机信息
+        hosts = []
+        for m in re.finditer(r"Nmap scan report for ([^\s]+)", stdout or ""):
+            hosts.append(m.group(1))
+        
+        # 提取端口信息
+        ports = []
+        for m in re.finditer(r"(\d+)/(\w+)\s+(\w+)\s+(\w+)", stdout or ""):
+            port_info = {
+                "port": int(m.group(1)),
+                "protocol": m.group(2),
+                "state": m.group(3),
+                "service": m.group(4)
+            }
+            ports.append(port_info)
+        
+        # 提取开放端口
+        open_ports = [p["port"] for p in ports if p["state"] in ["open", "open|filtered"]]
+        
+        # 提取服务信息
+        services = {}
+        for port_info in ports:
+            if port_info["state"] == "open":
+                services[f"{port_info['port']}/{port_info['protocol']}"] = port_info["service"]
+        
+        # 提取操作系统信息
+        os_info = []
+        for m in re.finditer(r"OS details: (.+)", stdout or ""):
+            os_info.append(m.group(1))
+        
+        # 提取脚本输出
+        script_outputs = []
+        script_pattern = r"\|_(.+)|\| (.+)"
+        for m in re.finditer(script_pattern, stdout or ""):
+            output = m.group(1) or m.group(2)
+            if output and output.strip():
+                script_outputs.append(output.strip())
+        
+        # 提取运行时间统计
+        runtime_stats = []
+        for m in re.finditer(r"(\w+) done in ([\d.]+) seconds", stdout or ""):
+            runtime_stats.append({
+                "task": m.group(1),
+                "time": float(m.group(2))
+            })
+        
+        # 更新解析结果
+        parsed.update({
+            "hosts": hosts,
+            "ports": ports,
+            "open_ports": sorted(open_ports),
+            "services": services,
+            "os_info": os_info,
+            "script_outputs": script_outputs,
+            "runtime_stats": runtime_stats,
+            "format": "text",
+            "source": "stdout_parsing"
+        })
+    
+    elif tool == "ehole":
         urls = []
         for m in re.finditer(r"https?://[^\s]+", stdout or ""):
             urls.append(m.group(0))
@@ -2079,6 +2432,75 @@ def parse_tool_output(tool: str, stdout: str, stderr: str) -> Dict[str, Any]:
             "browser_info": browser_info,
             "stats": stats
         })
+    elif tool == "hydra":
+        # Extract successful login attempts
+        successful_logins = []
+        for m in re.finditer(r"\[([\d\.]+)\]\s+\[([^\]]+)\]\s+login:\s+(\S+)\s+password:\s+(\S+)", stdout or ""):
+            successful_logins.append({
+                "host": m.group(1),
+                "service": m.group(2),
+                "username": m.group(3),
+                "password": m.group(4)
+            })
+        
+        # Extract failed login attempts
+        failed_logins = []
+        for line in lines:
+            if re.search(r"(?i)(failed|invalid|denied|refused|incorrect)", line) and not re.search(r"(?i)(successful|success)", line):
+                failed_logins.append(line.strip())
+        
+        # Extract error messages
+        errors = []
+        for line in lines:
+            if re.search(r"(?i)(error|exception|fatal|fail)", line):
+                errors.append(line.strip())
+        
+        # Extract progress information
+        progress = []
+        for m in re.finditer(r"\[ATTEMPT\]\s+target\s+(\S+)\s+-\s+login:\s+(\S+)\s+-\s+password:\s+(\S+)", stdout or ""):
+            progress.append({
+                "target": m.group(1),
+                "username": m.group(2),
+                "password": m.group(3)
+            })
+        
+        # Extract statistics
+        stats = []
+        for line in lines:
+            if re.search(r"(?i)(attempts|tries|progress|complete|finished|remaining)", line):
+                stats.append(line.strip())
+        
+        # Extract timing information
+        timing = []
+        for m in re.finditer(r"(?:time|elapsed|duration):\s*([0-9.]+)\s*(?:s|sec|seconds|h|hr|hours|m|min|minutes)", stdout or "", re.IGNORECASE):
+            timing.append(m.group(1))
+        
+        # Extract task information
+        tasks = []
+        for m in re.finditer(r"(?:tasks|threads|parallel):\s*(\d+)", stdout or "", re.IGNORECASE):
+            tasks.append(m.group(1))
+        
+        # Extract service information
+        services = []
+        for m in re.finditer(r"(?:service|protocol):\s*(\S+)", stdout or "", re.IGNORECASE):
+            services.append(m.group(1))
+        
+        # Extract target information
+        targets = []
+        for m in re.finditer(r"(?:target|host):\s*(\S+)", stdout or "", re.IGNORECASE):
+            targets.append(m.group(1))
+        
+        parsed.update({
+            "successful_logins": successful_logins,
+            "failed_logins": failed_logins,
+            "errors": errors,
+            "progress": progress,
+            "stats": stats,
+            "timing": timing,
+            "tasks": tasks,
+            "services": services,
+            "targets": targets
+        })
     return parsed
 
 def fetch_pentest_windows_readme(branch: str = "main") -> str:
@@ -2134,7 +2556,7 @@ def create_app(executor: CommandExecutor) -> Flask:
         except ValueError as e:
             return jsonify({"ok": False, "error": str(e)}), 400
         result = executor.run(cmd)
-        parsed = parse_tool_output(tool, result.get("stdout", ""), result.get("stderr", ""))
+        parsed = parse_tool_output(tool, result.get("stdout", ""), result.get("stderr", ""), data)
         result.update({"parsed": parsed, "lines": parsed.get("lines")})
         
         # Clean up temporary resource file if it was created
@@ -2185,7 +2607,7 @@ def create_app(executor: CommandExecutor) -> Flask:
         except ValueError as e:
             return jsonify({"ok": False, "error": str(e)}), 400
         result = executor.run(cmd)
-        parsed = parse_tool_output(tool, result.get("stdout", ""), result.get("stderr", ""))
+        parsed = parse_tool_output(tool, result.get("stdout", ""), result.get("stderr", ""), data)
         result.update({"parsed": parsed, "lines": parsed.get("lines")})
 
         # Clean up temporary resource file if it was created

@@ -258,17 +258,52 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         return pst_client.safe_post("api/tools/fscan", post_data)
 
     @mcp.tool()
-    def hydra_attack(target: str, service: str, username: str = "", username_file: str = "", password: str = "", password_file: str = "", additional_args: str = "") -> Dict[str, Any]:
-        data = {
+    def hydra_attack(
+        target: str,
+        service: str,
+        username: str = "",
+        username_file: str = "",
+        password: str = "",
+        password_file: str = "",
+        port: str = "",
+        tasks: str = "",
+        wait_time: str = "",
+        timeout: str = "",
+        login_attempts: str = "",
+        retry_time: str = "",
+        exit_on_success: bool = False,
+        skip_default_passwords: bool = False,
+        skip_empty_passwords: bool = False,
+        skip_login: bool = False,
+        use_ssl: bool = False,
+        additional_args: str = ""
+    ) -> Dict[str, Any]:
+        """
+        THC Hydra是一款强大的密码爆破工具，支持多种协议和服务。
+        可以对SSH、FTP、HTTP、RDP等多种服务进行用户名和密码的暴力破解。
+        支持并行任务处理和多种攻击模式，是渗透测试中常用的密码破解工具。
+        """
+        post_data = {
             "target": target,
             "service": service,
             "username": username,
             "username_file": username_file,
             "password": password,
             "password_file": password_file,
+            "port": port,
+            "tasks": tasks,
+            "wait_time": wait_time,
+            "timeout": timeout,
+            "login_attempts": login_attempts,
+            "retry_time": retry_time,
+            "exit_on_success": "1" if exit_on_success else "",
+            "skip_default_passwords": "1" if skip_default_passwords else "",
+            "skip_empty_passwords": "1" if skip_empty_passwords else "",
+            "skip_login": "1" if skip_login else "",
+            "use_ssl": "1" if use_ssl else "",
             "additional_args": additional_args
         }
-        return pst_client.safe_post("api/tools/hydra", data)
+        return pst_client.safe_post("api/tools/hydra", post_data)
 
     # ProjectDiscovery 套件
     @mcp.tool()
