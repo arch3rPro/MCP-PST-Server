@@ -37,6 +37,12 @@ The goal is to enable AI-driven offensive security testing by:
 - 🖥️ **Command Execution API**: Exposes a controlled API to execute terminal commands on your Windows machine.
 - 🕸️ **Web Challenge Support**: AI can interact with websites and APIs, capture flags via `curl` and any other tool AI needs.
 - 🔐 **Designed for Offensive Security Professionals**: Ideal for red teamers, bug bounty hunters, or CTF players automating common tasks.
+- 📊 **Automated Wordlist Management**: Automatically generate and manage security testing wordlists (passwords, admin accounts, API endpoints).
+- 🗂️ **Temporary File Management**: Automatic management of temporary files created during security testing.
+- 📈 **Performance Monitoring**: Built-in performance monitoring and detailed logging for all operations.
+- 🔄 **Error Handling & Retry Mechanisms**: Robust error handling with automatic retry capabilities.
+- 🌐 **Multiple Transport Modes**: Support for stdio, SSE, and HTTP transport modes.
+- 📚 **Comprehensive Documentation**: Detailed user guides, API references, and integration examples.
 
 ---
 
@@ -291,6 +297,9 @@ python mcp_server.py [options]
 
 - Add more endpoints based on the tool list in PST-Bucket (e.g., `afrog`, `ehole`, `fscan`, etc.).
 - Enhance parameter validation and output parsing for each tool to improve stability and readability.
+- Implement advanced workflow orchestration for complex security testing scenarios.
+- Add support for custom tool definitions and user-defined workflows.
+- Develop web-based management interface for monitoring and configuration.
 
 ## ⚠️ Disclaimer:
 This project is intended solely for educational and ethical testing purposes. Any misuse of the information or tools provided — including unauthorized access, exploitation, or malicious activity — is strictly prohibited.

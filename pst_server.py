@@ -52,7 +52,7 @@ def supported_tools() -> List[str]:
     return [
         "nmap", "httpx", "ffuf", "feroxbuster", "fscan", "hydra", "hackbrowserdata",
         "subfinder", "dnsx", "naabu", "nuclei", "katana", "afrog", "sqlmap",
-        "metasploit", "john", "nikto", "gobuster", "masscan", "netcat", "ehole", "bbot", "amass", "enscan", "searchsploit", "githacker", "gowitness",
+        "metasploit", "john", "nikto", "gobuster", "masscan", "netcat", "ehole", "bbot", "amass", "enscan", "searchsploit", "githacker", "gowitness", "seclists",
     ]
 
 ESSENTIAL_TOOLS = ["nmap", "httpx", "subfinder", "dnsx", "naabu", "nuclei", "ffuf", "feroxbuster", "fscan", "hydra"]
@@ -1458,6 +1458,56 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         
         return add_args(cmd, data.get("additional_args", ""))
 
+    if tool == "seclists":
+        action = data.get("action", "list")
+        category = data.get("category", "")
+        list_type = data.get("list_type", "")
+        output_file = data.get("output_file", "")
+        seclists_path = data.get("seclists_path", "D:\\Global\\apps\\SecLists\\current")
+        copy_to_workdir = data.get("copy_to_workdir", False)
+        workdir_path = data.get("workdir_path", "")
+        return_content = data.get("return_content", False)
+        max_lines = data.get("max_lines", 1000)
+        
+        # SecLists主要提供字典文件，不需要实际执行命令
+        # 这里我们模拟一个命令来展示如何使用SecLists
+        cmd = ["seclists"]
+        
+        # 添加SecLists路径
+        if seclists_path:
+            cmd += ["--path", seclists_path]
+        
+        # 添加操作类型
+        if action:
+            cmd += ["--action", action]
+        
+        # 添加分类
+        if category:
+            cmd += ["--category", category]
+        
+        # 添加列表类型
+        if list_type:
+            cmd += ["--type", list_type]
+        
+        # 添加输出文件
+        if output_file:
+            cmd += ["--output", output_file]
+        
+        # 添加复制到工作目录选项
+        if copy_to_workdir:
+            cmd += ["--copy-to-workdir"]
+            
+        # 添加工作目录路径
+        if workdir_path:
+            cmd += ["--workdir", workdir_path]
+        
+        # 添加内存传递选项
+        if return_content:
+            cmd += ["--return-content"]
+            cmd += ["--max-lines", str(max_lines)]
+        
+        return add_args(cmd, data.get("additional_args", ""))
+
     raise ValueError(f"Unsupported tool: {tool}")
 
 def shutil_which(name: str) -> Optional[str]:
@@ -1471,6 +1521,7 @@ ALIAS_BINARIES = {
     "searchsploit": ["searchsploit.cmd", "searchsploit"],
     "githacker": ["githacker"],
     "gowitness": ["gowitness"],
+    "seclists": ["seclists"],
 }
 
 def tools_status_map(names: List[str]) -> Dict[str, bool]:
@@ -2629,6 +2680,243 @@ def parse_tool_output(tool: str, stdout: str, stderr: str, data: Dict[str, Any] 
             "format": "structured",
             "source": "stdout_parsing"
         })
+    elif tool == "seclists":
+        # SecLists主要是字典文件集合，不需要实际执行命令
+        # 这里我们模拟解析SecLists的输出
+        
+        # 获取SecLists路径
+        seclists_path = data.get("seclists_path", "D:\\Global\\apps\\SecLists\\current")
+        
+        # 检查SecLists路径是否存在
+        path_exists = os.path.exists(seclists_path) if seclists_path else False
+        
+        # 获取复制到工作目录选项
+        copy_to_workdir = data.get("copy_to_workdir", False)
+        workdir_path = data.get("workdir_path", os.getcwd())
+        
+        # 获取内存传递选项
+        return_content = data.get("return_content", False)
+        max_lines = data.get("max_lines", 1000)  # 限制返回的行数，避免内存问题
+        
+        # 获取操作类型
+        action = data.get("action", "list")
+        
+        # 获取分类和类型
+        category = data.get("category", "")
+        list_type = data.get("list_type", "")
+        
+        # 提取字典分类
+        categories = []
+        for line in lines:
+            if re.search(r"(?i)(passwords|usernames|discovery|fuzzing|webshells|payloads)", line):
+                categories.append(line.strip())
+        
+        # 如果没有从输出中提取到分类，尝试从SecLists路径中获取
+        if not categories and path_exists:
+            try:
+                for item in os.listdir(seclists_path):
+                    if os.path.isdir(os.path.join(seclists_path, item)):
+                        if re.search(r"(?i)(passwords|usernames|discovery|fuzzing|webshells|payloads)", item):
+                            categories.append(item)
+            except Exception:
+                pass
+        
+        # 提取字典文件路径
+        file_paths = []
+        for m in re.finditer(r"([/\\][a-zA-Z0-9_\-/\\\.]+\.(?:txt|lst|dic|wordlist))", stdout or ""):
+            file_paths.append(m.group(1))
+        
+        # 如果没有从输出中提取到文件路径，尝试从SecLists路径中获取
+        if not file_paths and path_exists:
+            try:
+                for root, dirs, files in os.walk(seclists_path):
+                    for file in files:
+                        if file.endswith(('.txt', '.lst', '.dic', '.wordlist')):
+                            rel_path = os.path.relpath(os.path.join(root, file), seclists_path)
+                            file_paths.append(rel_path)
+                            # 限制返回的文件数量，避免过多
+                            if len(file_paths) >= 50:
+                                break
+                    if len(file_paths) >= 50:
+                        break
+            except Exception:
+                pass
+        
+        # 如果指定了分类和类型，尝试找到匹配的文件
+        target_file = None
+        if category and list_type and path_exists:
+            try:
+                # 构建可能的文件路径
+                category_path = os.path.join(seclists_path, category)
+                if os.path.exists(category_path):
+                    for file in os.listdir(category_path):
+                        if list_type.lower() in file.lower() and file.endswith(('.txt', '.lst', '.dic', '.wordlist')):
+                            target_file = os.path.join(category_path, file)
+                            break
+            except Exception:
+                pass
+        
+        # 如果需要复制到工作目录且找到了目标文件
+        copied_files = []
+        wordlist_content = None
+        
+        if copy_to_workdir and target_file and os.path.exists(target_file):
+            try:
+                # 确保工作目录存在
+                os.makedirs(workdir_path, exist_ok=True)
+                
+                # 创建目标文件名
+                filename = os.path.basename(target_file)
+                dest_path = os.path.join(workdir_path, filename)
+                
+                # 复制文件
+                import shutil
+                shutil.copy2(target_file, dest_path)
+                copied_files.append(dest_path)
+                
+                # 添加成功信息
+                success = [f"文件已复制到工作目录: {dest_path}"]
+            except Exception as e:
+                errors = [f"复制文件失败: {str(e)}"]
+        
+        # 如果需要返回文件内容到内存
+        if return_content and target_file and os.path.exists(target_file):
+            try:
+                with open(target_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+                
+                # 限制返回的行数
+                if len(lines) > max_lines:
+                    wordlist_content = {
+                        "content": lines[:max_lines],
+                        "total_lines": len(lines),
+                        "truncated": True,
+                        "max_lines": max_lines
+                    }
+                    success.append(f"词汇表内容已读取到内存（共 {len(lines)} 行，已截断为前 {max_lines} 行）")
+                else:
+                    wordlist_content = {
+                        "content": lines,
+                        "total_lines": len(lines),
+                        "truncated": False
+                    }
+                    success.append(f"词汇表内容已读取到内存（共 {len(lines)} 行）")
+            except Exception as e:
+                errors.append(f"读取文件内容失败: {str(e)}")
+        
+        # 提取字典文件大小
+        file_sizes = []
+        for m in re.finditer(r"size:\s*(\d+)\s*(?:kb|mb|gb|b)", stdout or "", re.IGNORECASE):
+            file_sizes.append(m.group(1))
+        
+        # 如果没有从输出中提取到文件大小，尝试计算实际文件大小
+        if not file_sizes and path_exists and file_paths:
+            try:
+                for file_path in file_paths[:10]:  # 只计算前10个文件的大小，避免过多操作
+                    full_path = os.path.join(seclists_path, file_path)
+                    if os.path.isfile(full_path):
+                        size_bytes = os.path.getsize(full_path)
+                        if size_bytes > 1024 * 1024:
+                            size_str = f"{size_bytes // (1024 * 1024)}MB"
+                        elif size_bytes > 1024:
+                            size_str = f"{size_bytes // 1024}KB"
+                        else:
+                            size_str = f"{size_bytes}B"
+                        file_sizes.append(size_str)
+            except Exception:
+                pass
+        
+        # 提取字典条目数量
+        entry_counts = []
+        for m in re.finditer(r"(?:entries|lines|words):\s*(\d+)", stdout or "", re.IGNORECASE):
+            entry_counts.append(m.group(1))
+        
+        # 如果没有从输出中提取到条目数量，尝试计算实际文件行数
+        if not entry_counts and path_exists and file_paths:
+            try:
+                for file_path in file_paths[:5]:  # 只计算前5个文件的行数，避免过多操作
+                    full_path = os.path.join(seclists_path, file_path)
+                    if os.path.isfile(full_path):
+                        with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                            lines_count = sum(1 for _ in f)
+                            entry_counts.append(str(lines_count))
+            except Exception:
+                pass
+        
+        # 提取字典类型
+        list_types = []
+        for line in lines:
+            if re.search(r"(?i)(common|default|rockyou|top10k|top100k|top1million)", line):
+                list_types.append(line.strip())
+        
+        # 提取使用建议
+        usage_tips = []
+        for line in lines:
+            if re.search(r"(?i)(usage|example|recommend|suggest)", line):
+                usage_tips.append(line.strip())
+        
+        # 如果没有使用建议，添加默认建议
+        if not usage_tips:
+            usage_tips = [
+                "使用密码字典进行弱密码测试",
+                "使用用户名字典进行用户名枚举",
+                "使用发现字典进行目录和文件发现",
+                "使用模糊测试字典进行参数模糊测试"
+            ]
+        
+        # 提取错误信息
+        errors = []
+        for line in lines:
+            if re.search(r"(?i)(error|fail|exception|not found|invalid)", line):
+                errors.append(line.strip())
+        
+        # 检查路径是否存在，如果不存在添加错误信息
+        if not path_exists and seclists_path:
+            errors.append(f"SecLists路径不存在: {seclists_path}")
+        
+        # 提取成功信息
+        success = []
+        for line in lines:
+            if re.search(r"(?i)(success|complete|done|found|loaded)", line):
+                success.append(line.strip())
+        
+        # 如果路径存在，添加成功信息
+        if path_exists:
+            success.append(f"SecLists路径有效: {seclists_path}")
+        
+        # 构建解析结果
+        result = {
+            "seclists_path": seclists_path,
+            "path_exists": path_exists,
+            "categories": categories,
+            "file_paths": file_paths,
+            "file_sizes": file_sizes,
+            "entry_counts": entry_counts,
+            "list_types": list_types,
+            "usage_tips": usage_tips,
+            "errors": errors,
+            "success": success,
+            "format": "dictionary_info",
+            "source": "stdout_parsing"
+        }
+        
+        # 添加复制文件信息
+        if copy_to_workdir:
+            result["copy_to_workdir"] = True
+            result["workdir_path"] = workdir_path
+            if copied_files:
+                result["copied_files"] = copied_files
+            if target_file:
+                result["target_file"] = target_file
+        
+        # 添加内存内容信息
+        if return_content:
+            result["return_content"] = True
+            result["max_lines"] = max_lines
+            if wordlist_content:
+                result["wordlist_content"] = wordlist_content
+        
+        parsed.update(result)
     return parsed
 
 def fetch_pentest_windows_readme(branch: str = "main") -> str:
