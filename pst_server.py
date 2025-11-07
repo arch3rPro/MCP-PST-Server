@@ -271,7 +271,7 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         jarm = data.get("jarm", False)
         follow_redirects = data.get("follow_redirects", False)
         
-        cmd = ["httpx", "-silent"]
+        cmd = ["httpx", "-silent", "-no-color"]
         
         # Add status code flag
         if status_code:
@@ -299,6 +299,14 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         
         # Add target or list file
         if list_file:
+            # 确保文件路径存在且可读
+            import os
+            if not os.path.exists(list_file):
+                raise ValueError(f"List file not found: {list_file}")
+            if not os.path.isfile(list_file):
+                raise ValueError(f"Path is not a file: {list_file}")
+            if not os.access(list_file, os.R_OK):
+                raise ValueError(f"File is not readable: {list_file}")
             cmd += ["-l", list_file]
         elif target:
             cmd += ["-u", target]
@@ -2500,6 +2508,126 @@ def parse_tool_output(tool: str, stdout: str, stderr: str, data: Dict[str, Any] 
             "tasks": tasks,
             "services": services,
             "targets": targets
+        })
+    elif tool == "httpx":
+        # Extract URLs
+        urls = []
+        for m in re.finditer(r"https?://[^\s\[\]]+", stdout or ""):
+            urls.append(m.group(0))
+        
+        # Extract status codes
+        status_codes = []
+        for m in re.finditer(r"\[([0-9]{3})\]", stdout or ""):
+            status_codes.append(int(m.group(1)))
+        
+        # Extract page titles
+        titles = []
+        for m in re.finditer(r"\[([^\[\]]+)\]", stdout or ""):
+            # Skip status codes (numeric)
+            if not re.match(r"^[0-9]{3}$", m.group(1)):
+                titles.append(m.group(1))
+        
+        # Extract technologies
+        technologies = []
+        for line in lines:
+            # Look for technology indicators in the output
+            tech_keywords = [
+                "nginx", "apache", "iis", "cloudflare", "express", "django", "rails", 
+                "php", "asp", "jsp", "node", "python", "ruby", "java", "go", "docker",
+                "kubernetes", "aws", "azure", "gcp", "jquery", "react", "vue", "angular",
+                "bootstrap", "wordpress", "drupal", "joomla", "shopify", "magento"
+            ]
+            for tech in tech_keywords:
+                if tech.lower() in line.lower() and tech not in technologies:
+                    technologies.append(tech)
+        
+        # Extract content lengths
+        content_lengths = []
+        for m in re.finditer(r"length:\s*(\d+)", stdout or "", re.IGNORECASE):
+            content_lengths.append(int(m.group(1)))
+        
+        # Extract IP addresses
+        ips = []
+        for m in re.finditer(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", stdout or ""):
+            ips.append(m.group(0))
+        
+        # Extract JARM hashes
+        jarm_hashes = []
+        for m in re.finditer(r"jarm:\s*([a-f0-9]{62})", stdout or "", re.IGNORECASE):
+            jarm_hashes.append(m.group(1))
+        
+        # Extract error messages
+        errors = []
+        for line in lines:
+            if re.search(r"(?i)(error|fail|exception|denied|not found|invalid|timeout|connection refused)", line):
+                errors.append(line.strip())
+        
+        # Extract redirect chains
+        redirects = []
+        for line in lines:
+            if re.search(r"(?i)(redirect|location|moved)", line):
+                redirects.append(line.strip())
+        
+        # Parse structured results
+        results = []
+        # Try to match the typical httpx output format: URL [STATUS_CODE] [TITLE]
+        for line in lines:
+            # Skip empty lines
+            if not line.strip():
+                continue
+                
+            # Try to extract URL, status code, and title from each line
+            url_match = re.search(r"(https?://[^\s\[\]]+)", line)
+            status_match = re.search(r"\[([0-9]{3})\]", line)
+            title_match = re.search(r"\[([^\[\]]+)\]", line)
+            
+            if url_match:
+                result = {"url": url_match.group(0)}
+                
+                if status_match:
+                    result["status_code"] = int(status_match.group(1))
+                
+                if title_match and not re.match(r"^[0-9]{3}$", title_match.group(1)):
+                    result["title"] = title_match.group(1)
+                
+                # Extract IP if present
+                ip_match = re.search(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", line)
+                if ip_match:
+                    result["ip"] = ip_match.group(0)
+                
+                # Extract content length if present
+                length_match = re.search(r"length:\s*(\d+)", line, re.IGNORECASE)
+                if length_match:
+                    result["content_length"] = int(length_match.group(1))
+                
+                # Extract technologies if present
+                line_techs = []
+                for tech in technologies:
+                    if tech.lower() in line.lower():
+                        line_techs.append(tech)
+                if line_techs:
+                    result["technologies"] = line_techs
+                
+                # Extract JARM if present
+                jarm_match = re.search(r"jarm:\s*([a-f0-9]{62})", line, re.IGNORECASE)
+                if jarm_match:
+                    result["jarm"] = jarm_match.group(1)
+                
+                results.append(result)
+        
+        parsed.update({
+            "results": results,
+            "urls": urls,
+            "status_codes": status_codes,
+            "titles": titles,
+            "technologies": technologies,
+            "content_lengths": content_lengths,
+            "ips": ips,
+            "jarm_hashes": jarm_hashes,
+            "errors": errors,
+            "redirects": redirects,
+            "format": "structured",
+            "source": "stdout_parsing"
         })
     return parsed
 
