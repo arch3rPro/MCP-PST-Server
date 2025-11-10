@@ -336,6 +336,20 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         # Add wordlist
         if wordlist:
             cmd += ["-w", wordlist]
+        else:
+            # 如果没有指定wordlist，尝试使用SecLists中的默认web目录字典
+            seclists_path = data.get("seclists_path", "D:\\Global\\apps\\SecLists\\current")
+            # 常用的web目录扫描字典路径
+            default_wordlists = [
+                os.path.join(seclists_path, "Discovery", "Web-Content", "common.txt"),
+                os.path.join(seclists_path, "Discovery", "Web-Content", "directory-list-lowercase-2.3-small.txt")
+            ]
+            
+            # 检查默认字典文件是否存在
+            for wl_path in default_wordlists:
+                if os.path.exists(wl_path):
+                    cmd += ["-w", wl_path]
+                    break
         
         # Add HTTP method
         if method:
@@ -412,7 +426,10 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         
         # Add HTTP methods
         if methods:
-            cmd += ["-m", methods]
+            for method in methods.split(","):
+                method = method.strip()
+                if method:
+                    cmd += ["-m", method]
         
         # Add headers
         if headers:
@@ -423,11 +440,18 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         
         # Add cookies
         if cookies:
-            cmd += ["-C", cookies]
+            for cookie in cookies.split(","):
+                cookie = cookie.strip()
+                if cookie:
+                    cmd += ["-b", cookie]
         
         # Add status codes
         if status_codes:
-            cmd += ["-s", status_codes]
+            cmd.append("-s")
+            for code in status_codes.split(","):
+                code = code.strip()
+                if code:
+                    cmd.append(code)
         
         # Add threads
         if threads:
@@ -459,7 +483,7 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         
         # Add JSON output flag
         if json:
-            cmd += ["-j"]
+            cmd += ["--json"]
         
         # Add output file
         if output:

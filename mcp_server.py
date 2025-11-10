@@ -366,7 +366,19 @@ class TempFileManager:
 
 
 # 全局临时文件管理器实例
-temp_file_manager = TempFileManager()
+# 确保在所有装饰器和依赖项定义后正确初始化
+temp_file_manager = None
+
+def init_temp_file_manager():
+    """初始化临时文件管理器"""
+    global temp_file_manager
+    if temp_file_manager is None:
+        temp_file_manager = TempFileManager()
+        logger.info("临时文件管理器初始化成功")
+    return temp_file_manager
+
+# 立即初始化临时文件管理器
+temp_file_manager = init_temp_file_manager()
 
 class PSTToolsClient:
     """Windows PST API Server 客户端"""
@@ -595,7 +607,8 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         json: bool = False,
         output: str = "",
         burp: bool = False,
-        additional_args: str = ""
+        additional_args: str = "",
+        seclists_path: str = "D:\\Global\\apps\\SecLists\\current"
     ) -> Dict[str, Any]:
         """
         快速、灵活的目录和文件扫描工具，专为Web应用安全测试设计。
@@ -617,7 +630,8 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
             "json": "1" if json else "",
             "output": output,
             "burp": "1" if burp else "",
-            "additional_args": additional_args
+            "additional_args": additional_args,
+            "seclists_path": seclists_path
         }
         return pst_client.safe_post("api/tools/feroxbuster", post_data)
 
