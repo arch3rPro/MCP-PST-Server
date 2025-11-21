@@ -367,18 +367,18 @@ class TempFileManager:
 
 # 全局临时文件管理器实例
 # 确保在所有装饰器和依赖项定义后正确初始化
-temp_file_manager = None
+global_temp_file_manager = None
 
 def init_temp_file_manager():
     """初始化临时文件管理器"""
-    global temp_file_manager
-    if temp_file_manager is None:
-        temp_file_manager = TempFileManager()
+    global global_temp_file_manager
+    if global_temp_file_manager is None:
+        global_temp_file_manager = TempFileManager()
         logger.info("临时文件管理器初始化成功")
-    return temp_file_manager
+    return global_temp_file_manager
 
 # 立即初始化临时文件管理器
-temp_file_manager = init_temp_file_manager()
+global_temp_file_manager = init_temp_file_manager()
 
 class PSTToolsClient:
     """Windows PST API Server 客户端"""
@@ -2032,7 +2032,7 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
                 
             # 使用临时文件管理器创建临时文件
             file_id = f"wordlist_{scan_type}_{int(time.time())}"
-            wordlist_path = temp_file_manager.create_temp_file_with_id(
+            wordlist_path = global_temp_file_manager.create_temp_file_with_id(
                 file_id=file_id,
                 content=wordlist_result["wordlist_content"],
                 suffix=".txt",
@@ -2106,7 +2106,7 @@ def setup_mcp_server(pst_client: PSTToolsClient) -> FastMCP:
         # 步骤4: 清理临时文件（如果是内存传递方式）
         if use_memory and wordlist_result.get("temp_file_id"):
             try:
-                temp_file_manager.delete_temp_file(wordlist_result["temp_file_id"])
+                global_temp_file_manager.delete_temp_file(wordlist_result["temp_file_id"])
                 temp_cleanup_result = {"success": True, "message": "Temporary file cleaned up successfully"}
             except Exception as e:
                 temp_cleanup_result = {"success": False, "error": str(e)}
@@ -2786,7 +2786,7 @@ def ci_cd_integration():
 
     # 系统工具 - 临时文件管理
     @mcp.tool()
-    def temp_file_manager(
+    def manage_temp_files(
         action: str,
         file_id: str = "",
         file_path: str = "",
@@ -2802,7 +2802,7 @@ def ci_cd_integration():
             if action == "create":
                 # 创建临时文件
                 if file_id:
-                    file_path = temp_file_manager.create_temp_file_with_id(
+                    file_path = global_temp_file_manager.create_temp_file_with_id(
                         file_id=file_id,
                         content=content,
                         suffix=suffix,
@@ -2815,14 +2815,14 @@ def ci_cd_integration():
                         "message": f"创建临时文件成功，ID: {file_id}"
                     }
                 else:
-                    file_path = temp_file_manager.create_temp_file(
+                    file_path = global_temp_file_manager.create_temp_file(
                         content=content,
                         suffix=suffix,
                         prefix=prefix
                     )
                     
                     # 获取生成的文件ID
-                    for fid, finfo in temp_file_manager.temp_files.items():
+                    for fid, finfo in global_temp_file_manager.temp_files.items():
                         if finfo["path"] == file_path:
                             return {
                                 "success": True,
@@ -2838,7 +2838,7 @@ def ci_cd_integration():
             
             elif action == "create_dir":
                 # 创建临时目录
-                dir_path = temp_file_manager.create_temp_dir(prefix)
+                dir_path = global_temp_file_manager.create_temp_dir(prefix)
                 return {
                     "success": True,
                     "dir_path": dir_path,
@@ -2853,7 +2853,7 @@ def ci_cd_integration():
                         "error": "获取文件路径需要提供file_id参数"
                     }
                 
-                file_path = temp_file_manager.get_temp_file_path(file_id)
+                file_path = global_temp_file_manager.get_temp_file_path(file_id)
                 if file_path:
                     return {
                         "success": True,
@@ -2870,7 +2870,7 @@ def ci_cd_integration():
             elif action == "delete":
                 # 删除文件
                 if file_id:
-                    success = temp_file_manager.delete_temp_file(file_id)
+                    success = global_temp_file_manager.delete_temp_file(file_id)
                     if success:
                         return {
                             "success": True,
@@ -2882,7 +2882,7 @@ def ci_cd_integration():
                             "error": f"删除临时文件失败，ID: {file_id} 或文件不存在"
                         }
                 elif file_path:
-                    success = temp_file_manager.delete_temp_file_by_path(file_path)
+                    success = global_temp_file_manager.delete_temp_file_by_path(file_path)
                     if success:
                         return {
                             "success": True,
@@ -2901,8 +2901,8 @@ def ci_cd_integration():
             
             elif action == "list":
                 # 列出所有文件
-                temp_files = temp_file_manager.list_temp_files()
-                stats = temp_file_manager.get_temp_file_stats()
+                temp_files = global_temp_file_manager.list_temp_files()
+                stats = global_temp_file_manager.get_temp_file_stats()
                 
                 return {
                     "success": True,
@@ -2913,7 +2913,7 @@ def ci_cd_integration():
             
             elif action == "cleanup":
                 # 清理旧文件
-                deleted_count = temp_file_manager.cleanup_temp_files(max_age_hours)
+                deleted_count = global_temp_file_manager.cleanup_temp_files(max_age_hours)
                 return {
                     "success": True,
                     "deleted_count": deleted_count,
@@ -2923,7 +2923,7 @@ def ci_cd_integration():
             
             elif action == "cleanup_all":
                 # 清理所有文件
-                deleted_count = temp_file_manager.cleanup_all_temp_files()
+                deleted_count = global_temp_file_manager.cleanup_all_temp_files()
                 return {
                     "success": True,
                     "deleted_count": deleted_count,
@@ -3033,7 +3033,7 @@ def main():
             # 清理资源
             try:
                 pst_client.close()
-                temp_file_manager.cleanup_all_temp_files()
+                global_temp_file_manager.cleanup_all_temp_files()
                 logger.info("资源清理完成")
             except Exception as e:
                 logger.error(f"资源清理失败: {str(e)}")

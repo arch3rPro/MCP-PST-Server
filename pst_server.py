@@ -1493,44 +1493,71 @@ def build_command(tool: str, data: Dict[str, str]) -> List[str]:
         return_content = data.get("return_content", False)
         max_lines = data.get("max_lines", 1000)
         
-        # SecLists主要提供字典文件，不需要实际执行命令
-        # 这里我们模拟一个命令来展示如何使用SecLists
-        cmd = ["seclists"]
+        # SecLists是一个字典文件集合，不需要执行外部命令
+        # 使用Python直接处理文件系统操作
+        cmd = [sys.executable, "-c", f"""
+import os
+import sys
+import json
+seclists_path = r"{seclists_path}"
+action = "{action}"
+category = "{category}"
+list_type = "{list_type}"
+output_file = "{output_file}"
+copy_to_workdir = {copy_to_workdir}
+workdir_path = r"{workdir_path}"
+return_content = {return_content}
+max_lines = {max_lines}
+
+# 模拟seclists工具的输出
+print(f"SecLists Path: {{seclists_path}}")
+print(f"Action: {{action}}")
+print(f"Category: {{category}}")
+print(f"List Type: {{list_type}}")
+
+if os.path.exists(seclists_path) and os.path.isdir(seclists_path):
+    print("SecLists directory found")
+    if action == "list":
+        # 列出可用的分类和文件
+        categories = []
+        for item in os.listdir(seclists_path):
+            item_path = os.path.join(seclists_path, item)
+            if os.path.isdir(item_path):
+                categories.append(item)
+        print(f"Available categories: {{', '.join(categories)}}")
+    
+    if category and list_type:
+        # 模拟获取特定字典文件
+        target_file = os.path.join(seclists_path, category, f"{{list_type}}.txt")
+        if os.path.exists(target_file):
+            print(f"Dictionary file found: {{target_file}}")
+            if return_content:
+                try:
+                    with open(target_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        lines = f.readlines()[:max_lines]
+                        content = ''.join(lines)
+                        print(f"Content preview (first {{len(lines)}} lines):")
+                        print(content)
+                except Exception as e:
+                    print(f"Error reading file: {{e}}")
+            if output_file:
+                print(f"Output would be saved to: {{output_file}}")
+            if copy_to_workdir and workdir_path:
+                print(f"File would be copied to: {{workdir_path}}")
+        else:
+            print(f"Dictionary file not found: {{target_file}}")
+            print("Available files in category:")
+            category_path = os.path.join(seclists_path, category)
+            if os.path.exists(category_path):
+                for file in os.listdir(category_path):
+                    if file.endswith('.txt'):
+                        print(f"  {{file}}")
+else:
+    print(f"SecLists directory not found: {{seclists_path}}")
+    print("Please ensure SecLists is installed at the specified path")
+"""]
         
-        # 添加SecLists路径
-        if seclists_path:
-            cmd += ["--path", seclists_path]
-        
-        # 添加操作类型
-        if action:
-            cmd += ["--action", action]
-        
-        # 添加分类
-        if category:
-            cmd += ["--category", category]
-        
-        # 添加列表类型
-        if list_type:
-            cmd += ["--type", list_type]
-        
-        # 添加输出文件
-        if output_file:
-            cmd += ["--output", output_file]
-        
-        # 添加复制到工作目录选项
-        if copy_to_workdir:
-            cmd += ["--copy-to-workdir"]
-            
-        # 添加工作目录路径
-        if workdir_path:
-            cmd += ["--workdir", workdir_path]
-        
-        # 添加内存传递选项
-        if return_content:
-            cmd += ["--return-content"]
-            cmd += ["--max-lines", str(max_lines)]
-        
-        return add_args(cmd, data.get("additional_args", ""))
+        return cmd
 
     raise ValueError(f"Unsupported tool: {tool}")
 
@@ -1551,9 +1578,15 @@ ALIAS_BINARIES = {
 def tools_status_map(names: List[str]) -> Dict[str, bool]:
     status: Dict[str, bool] = {}
     for name in names:
-        binaries = ALIAS_BINARIES.get(name, [name])
-        ok = any(shutil_which(b) is not None for b in binaries)
-        status[name] = ok
+        # Special handling for seclists - check if directory exists instead of executable
+        if name == "seclists":
+            seclists_path = "D:\\Global\\apps\\SecLists\\current"
+            ok = os.path.exists(seclists_path) and os.path.isdir(seclists_path)
+            status[name] = ok
+        else:
+            binaries = ALIAS_BINARIES.get(name, [name])
+            ok = any(shutil_which(b) is not None for b in binaries)
+            status[name] = ok
     return status
 
 def validate_tool_params(tool: str, data: Dict[str, Any]) -> Optional[str]:
@@ -2981,9 +3014,19 @@ def create_app(executor: CommandExecutor) -> Flask:
         command = data.get("command")
         if not command:
             return jsonify({"ok": False, "error": "Missing 'command'"}), 400
-        cmd = shlex.split(command)
-        result = executor.run(cmd)
-        return jsonify(result)
+        try:
+            # Windows环境下使用更安全的命令分割方式
+            if sys.platform == "win32":
+                # Windows: 使用字符串直接执行，避免shlex.split的问题
+                cmd = command
+            else:
+                # Unix-like系统: 使用shlex.split
+                cmd = shlex.split(command)
+            result = executor.run(cmd)
+            return jsonify(result)
+        except Exception as e:
+            logging.error(f"Command execution error: {str(e)}")
+            return jsonify({"ok": False, "error": f"Command execution failed: {str(e)}"}), 500
 
     @app.route("/api/tools/<tool>", methods=["POST"])
     def api_tool(tool: str):
